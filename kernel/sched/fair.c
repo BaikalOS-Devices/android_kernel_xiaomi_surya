@@ -7751,11 +7751,6 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	int mid_cap_orig_cpu = cpu_rq(smp_processor_id())->rd->mid_cap_orig_cpu;
 	struct task_struct *curr_tsk;
 
-    //long clamp_min = p->util_min;
-    //long clamp_max = p->util_max;
-
-    //if( clamp_max == 0 ) clamp_max = 100;
-
 	*backup_cpu = -1;
 
 	/*
@@ -8209,7 +8204,8 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	if (target_cpu != -1 && !idle_cpu(target_cpu) &&
 			best_idle_cpu != -1) {
 		curr_tsk = READ_ONCE(cpu_rq(target_cpu)->curr);
-		if (curr_tsk && schedtune_prefer_high_cap(curr_tsk)) {
+
+		if (curr_tsk && schedtune_task_boost_rcu_locked(curr_tsk)) {
 			target_cpu = best_idle_cpu;
             if( unlikely(enable_fbt_debug) && boosted ) pr_info("Task pid %d tgid %d with boost=%d, prio=%d, util=%d, best_idle_cpu2=%d", p->pid, p->tgid, schedtune_task_boost(p), p->prio, task_util(p), target_cpu);
 		}

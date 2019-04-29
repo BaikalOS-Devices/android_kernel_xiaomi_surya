@@ -17,6 +17,7 @@ int schedtune_cpu_util_min(int cpu);
 int schedtune_cpu_util_max(int cpu);
 
 int schedtune_task_boost(struct task_struct *tsk);
+int schedtune_task_boost_rcu_locked(struct task_struct *tsk);
 
 int schedtune_prefer_idle(struct task_struct *tsk);
 int schedtune_prefer_high_cap(struct task_struct *tsk);
