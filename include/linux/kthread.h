@@ -59,8 +59,8 @@ struct task_struct *kthread_create_on_cpu(int (*threadfn)(void *data),
 	struct task_struct *__k						   \
 		= kthread_create(threadfn, data, namefmt, ## __VA_ARGS__); \
 	if (!IS_ERR(__k)) {						   \
-		__k->flags |= PF_PERF_CRITICAL;				   \
-		kthread_bind_mask(__k, cpu_perf_mask);			   \
+		/*__k->flags |= PF_PERF_CRITICAL;*/				   \
+		/*kthread_bind_mask(__k, cpu_perf_mask);*/			   \
 		wake_up_process(__k);					   \
 	}								   \
 	__k;								   \

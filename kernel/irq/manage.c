@@ -379,8 +379,8 @@ int irq_setup_affinity(struct irq_desc *desc)
 	if (cpumask_empty(&mask))
 		cpumask_copy(&mask, cpu_online_mask);
 
-	if (irqd_has_set(&desc->irq_data, IRQF_PERF_CRITICAL))
-		cpumask_copy(&mask, cpu_perf_mask);
+	//if (irqd_has_set(&desc->irq_data, IRQF_PERF_CRITICAL))
+	//	cpumask_copy(&mask, cpu_perf_mask);
 
 	if (node != NUMA_NO_NODE) {
 		const struct cpumask *nodemask = cpumask_of_node(node);
@@ -1161,14 +1161,14 @@ static void add_desc_to_perf_list(struct irq_desc *desc)
 
 static void affine_one_perf_thread(struct task_struct *t)
 {
-	t->flags |= PF_PERF_CRITICAL;
-	set_cpus_allowed_ptr(t, cpu_perf_mask);
+	//t->flags |= PF_PERF_CRITICAL;
+	//set_cpus_allowed_ptr(t, cpu_perf_mask);
 }
 
 static void unaffine_one_perf_thread(struct task_struct *t)
 {
-	t->flags &= ~PF_PERF_CRITICAL;
-	set_cpus_allowed_ptr(t, cpu_all_mask);
+	//t->flags &= ~PF_PERF_CRITICAL;
+	//set_cpus_allowed_ptr(t, cpu_all_mask);
 }
 
 static void affine_one_perf_irq(struct irq_desc *desc)
@@ -1519,8 +1519,8 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
 		}
 
-		if (new->flags & IRQF_PERF_CRITICAL) 
-			setup_perf_irq_locked(desc);
+		//if (new->flags & IRQF_PERF_CRITICAL) 
+		//	setup_perf_irq_locked(desc);
 
 		if (irq_settings_can_autoenable(desc)) {
 			irq_startup(desc, IRQ_RESEND, IRQ_START_COND);
@@ -1690,7 +1690,7 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 		action_ptr = &action->next;
 	}
 
-	if (action->flags & IRQF_PERF_CRITICAL) {
+	/*if (action->flags & IRQF_PERF_CRITICAL) {
 		struct irq_desc_list *data;
 
 		raw_spin_lock(&perf_irqs_lock);
@@ -1702,7 +1702,7 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 			}
 		}
 		raw_spin_unlock(&perf_irqs_lock);
-	}
+	}*/
 
 	/* Found it - now remove it from the list of entries: */
 	*action_ptr = action->next;
