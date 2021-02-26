@@ -1385,9 +1385,9 @@ static void ufs_qcom_dev_ref_clk_ctrl(struct ufs_qcom_host *host, bool enable)
 		if (enable) {
 			if (host->hba->dev_info.quirks &
 			    UFS_DEVICE_QUIRK_WAIT_AFTER_REF_CLK_UNGATE)
-				usleep_range(50, 60);
+				usleep_range(960, 970);
 			else
-				udelay(1);
+				usleep_range(200, 210);
 		}
 
 		host->is_dev_ref_clk_enabled = enable;
@@ -1582,6 +1582,7 @@ static void ufs_qcom_set_caps(struct ufs_hba *hba)
 	if (!host->disable_lpm) {
 		hba->caps |= UFSHCD_CAP_CLK_GATING;
 		hba->caps |= UFSHCD_CAP_HIBERN8_WITH_CLK_GATING;
+		hba->caps |= UFSHCD_CAP_CLK_SCALING;
 	}
 	hba->caps |= UFSHCD_CAP_AUTO_BKOPS_SUSPEND;
 
@@ -2909,6 +2910,7 @@ static struct platform_driver ufs_qcom_pltform = {
 		.name	= "ufshcd-qcom",
 		.pm	= &ufs_qcom_pm_ops,
 		.of_match_table = of_match_ptr(ufs_qcom_of_match),
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 };
 module_platform_driver(ufs_qcom_pltform);

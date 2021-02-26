@@ -1366,6 +1366,12 @@ struct task_struct {
 	void				*security;
 #endif
 
+	struct {
+		struct work_struct work;
+		atomic_t running;
+		bool free_stack;
+	} async_free;
+
 	/*
 	 * New fields for task_struct should be added above here, so that
 	 * they are included in the randomized portion of task_struct.
@@ -1742,7 +1748,7 @@ extern struct task_struct *idle_task(int cpu);
  *
  * Return: 1 if @p is an idle task. 0 otherwise.
  */
-static inline bool is_idle_task(const struct task_struct *p)
+static __always_inline bool is_idle_task(const struct task_struct *p)
 {
 	return !!(p->flags & PF_IDLE);
 }
@@ -1996,5 +2002,11 @@ static inline void set_wake_up_idle(bool enabled)
 	else
 		current->flags &= ~PF_WAKE_UP_IDLE;
 }
+
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+int do_stune_boost(char *st_name, int boost, int *slot);
+int do_stune_sched_boost(char *st_name, int *slot);
+int reset_stune_boost(char *st_name, int slot);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 #endif

@@ -3,7 +3,7 @@
  *
  * This code is based on drivers/scsi/ufs/ufshcd.c
  * Copyright (C) 2011-2013 Samsung India Software Operations
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -210,6 +210,8 @@ static void ufshcd_update_uic_error_cnt(struct ufs_hba *hba, u32 reg, int type)
 /* UIC command timeout, unit: ms */
 #define UIC_CMD_TIMEOUT	500
 
+#define UIC_PWR_CTRL_TIMEOUT 3000
+
 /* NOP OUT retries waiting for NOP IN response */
 #define NOP_OUT_RETRIES    10
 /* Timeout after 30 msecs if NOP OUT hangs without response */
@@ -218,7 +220,7 @@ static void ufshcd_update_uic_error_cnt(struct ufs_hba *hba, u32 reg, int type)
 /* Query request retries */
 #define QUERY_REQ_RETRIES 3
 /* Query request timeout */
-#define QUERY_REQ_TIMEOUT 1500 /* 1.5 seconds */
+#define QUERY_REQ_TIMEOUT 3000 /* 3.0 seconds */
 
 /* Task management command timeout */
 #define TM_CMD_TIMEOUT	100 /* msecs */
@@ -403,7 +405,7 @@ static struct ufs_dev_fix ufs_fixups[] = {
 	/* UFS cards deviations table */
 	UFS_FIX(UFS_VENDOR_SAMSUNG, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_DELAY_BEFORE_LPM),
-	UFS_FIX(UFS_VENDOR_SAMSUNG, UFS_ANY_MODEL,
+	UFS_FIX(UFS_ANY_VENDOR, UFS_ANY_MODEL,
 		UFS_DEVICE_NO_FASTAUTO),
 	UFS_FIX(UFS_VENDOR_SAMSUNG, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_HOST_PA_TACTIVATE),
@@ -422,6 +424,8 @@ static struct ufs_dev_fix ufs_fixups[] = {
 	UFS_FIX(UFS_VENDOR_SKHYNIX, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_HOST_PA_SAVECONFIGTIME),
 	UFS_FIX(UFS_VENDOR_SKHYNIX, UFS_ANY_MODEL,
+		UFS_DEVICE_QUIRK_WAIT_AFTER_REF_CLK_UNGATE),
+	UFS_FIX(UFS_VENDOR_SANDISK, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_WAIT_AFTER_REF_CLK_UNGATE),
 	UFS_FIX(UFS_VENDOR_SKHYNIX, "hB8aL1",
 		UFS_DEVICE_QUIRK_HS_G1_TO_HS_G3_SWITCH),
@@ -2583,6 +2587,9 @@ static void ufshcd_exit_clk_gating(struct ufs_hba *hba)
 
 static void ufshcd_set_auto_hibern8_timer(struct ufs_hba *hba, u32 delay)
 {
+	if (!ufshcd_is_auto_hibern8_supported(hba))
+		return;
+
 	ufshcd_rmwl(hba, AUTO_HIBERN8_TIMER_SCALE_MASK |
 			 AUTO_HIBERN8_IDLE_TIMER_MASK,
 			AUTO_HIBERN8_TIMER_SCALE_1_MS | delay,
@@ -2871,19 +2878,15 @@ static ssize_t ufshcd_hibern8_on_idle_enable_show(struct device *dev,
 			hba->hibern8_on_idle.is_enabled);
 }
 
-static ssize_t ufshcd_hibern8_on_idle_enable_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+
+static void ufshcd_hibern8_on_idle_switch_work(struct work_struct *work)
 {
-	struct ufs_hba *hba = dev_get_drvdata(dev);
+	struct ufs_hba *hba;
 	unsigned long flags;
 	u32 value;
 
-	if (kstrtou32(buf, 0, &value))
-		return -EINVAL;
-
-	value = !!value;
-	if (value == hba->hibern8_on_idle.is_enabled)
-		goto out;
+	hba = container_of(work, struct ufs_hba, hibern8_on_idle_enable_work);
+	value = !hba->hibern8_on_idle.is_enabled;
 
 	/* Update auto hibern8 timer value if supported */
 	if (ufshcd_is_auto_hibern8_supported(hba)) {
@@ -2907,6 +2910,31 @@ static ssize_t ufshcd_hibern8_on_idle_enable_store(struct device *dev,
 
 	hba->hibern8_on_idle.is_enabled = value;
 out:
+	return;
+}
+
+static ssize_t ufshcd_hibern8_on_idle_enable_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct ufs_hba *hba = dev_get_drvdata(dev);
+	u32 value;
+
+	if (!ufshcd_is_hibern8_on_idle_allowed(hba))
+		return count;
+
+	if (kstrtou32(buf, 0, &value))
+		return -EINVAL;
+
+	mutex_lock(&hba->hibern8_on_idle.enable_mutex);
+	/*
+	 * make sure that former operation has been done before we exectue
+	 * next action. This could gareatee the order and synconization.
+	 */
+	flush_work(&hba->hibern8_on_idle_enable_work);
+	if (hba->hibern8_on_idle.is_enabled != !!value)
+		schedule_work(&hba->hibern8_on_idle_enable_work);
+	mutex_unlock(&hba->hibern8_on_idle.enable_mutex);
+
 	return count;
 }
 
@@ -2927,6 +2955,8 @@ static void ufshcd_init_hibern8_on_idle(struct ufs_hba *hba)
 		 * auto hibern8 is supported
 		 */
 		hba->caps &= ~UFSHCD_CAP_HIBERN8_ENTER_ON_IDLE;
+		hba->hibern8_on_idle.is_enabled = true;
+		return;
 	} else {
 		hba->hibern8_on_idle.delay_ms = 10;
 		INIT_DELAYED_WORK(&hba->hibern8_on_idle.enter_work,
@@ -2960,8 +2990,7 @@ static void ufshcd_init_hibern8_on_idle(struct ufs_hba *hba)
 
 static void ufshcd_exit_hibern8_on_idle(struct ufs_hba *hba)
 {
-	if (!ufshcd_is_hibern8_on_idle_allowed(hba) &&
-	    !ufshcd_is_auto_hibern8_supported(hba))
+	if (!ufshcd_is_hibern8_on_idle_allowed(hba))
 		return;
 	device_remove_file(hba->dev, &hba->hibern8_on_idle.delay_attr);
 	device_remove_file(hba->dev, &hba->hibern8_on_idle.enable_attr);
@@ -3116,6 +3145,9 @@ static inline void ufshcd_hba_capabilities(struct ufs_hba *hba)
 	hba->nutrs = (hba->capabilities & MASK_TRANSFER_REQUESTS_SLOTS) + 1;
 	hba->nutmrs =
 	((hba->capabilities & MASK_TASK_MANAGEMENT_REQUEST_SLOTS) >> 16) + 1;
+
+	/* disable auto hibern8 */
+	hba->capabilities &= ~MASK_AUTO_HIBERN8_SUPPORT;
 }
 
 /**
@@ -5137,7 +5169,7 @@ static int ufshcd_uic_pwr_ctrl(struct ufs_hba *hba, struct uic_command *cmd)
 
 more_wait:
 	if (!wait_for_completion_timeout(hba->uic_async_done,
-					 msecs_to_jiffies(UIC_CMD_TIMEOUT))) {
+					 msecs_to_jiffies(UIC_PWR_CTRL_TIMEOUT))) {
 		u32 intr_status = 0;
 		s64 ts_since_last_intr;
 
@@ -7908,8 +7940,12 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba)
 	ufshcd_set_clk_freq(hba, true);
 
 	err = ufshcd_hba_enable(hba);
-	if (err)
+	if (err) {
+		/* ufshcd_probe_hba() will put it */
+		if (!ufshcd_eh_in_progress(hba) && !hba->pm_op_in_progress)
+			pm_runtime_put_sync(hba->dev);
 		goto out;
+	}
 
 	/* Establish the link again and restore the device */
 	err = ufshcd_probe_hba(hba);
@@ -7971,6 +8007,8 @@ static int ufshcd_reset_and_restore(struct ufs_hba *hba)
 	ufshcd_enable_irq(hba);
 
 	do {
+		if (!ufshcd_eh_in_progress(hba) && !hba->pm_op_in_progress)
+			pm_runtime_get_sync(hba->dev);
 		err = ufshcd_detect_device(hba);
 	} while (err && --retries);
 
@@ -8906,10 +8944,7 @@ reinit:
 	 * Enable auto hibern8 if supported, after full host and
 	 * device initialization.
 	 */
-	if (ufshcd_is_auto_hibern8_supported(hba) &&
-	    hba->hibern8_on_idle.is_enabled)
-		ufshcd_set_auto_hibern8_timer(hba,
-				      hba->hibern8_on_idle.delay_ms);
+	ufshcd_set_auto_hibern8_timer(hba, hba->hibern8_on_idle.delay_ms);
 out:
 	if (ret) {
 		ufshcd_set_ufs_dev_poweroff(hba);
@@ -9445,8 +9480,9 @@ static int ufshcd_config_vreg(struct device *dev,
 
 		ret = regulator_set_voltage(reg, min_uV, vreg->max_uV);
 		if (ret) {
-			dev_err(dev, "%s: %s set voltage failed, err=%d\n",
-					__func__, name, ret);
+			dev_err(dev,
+				"%s: %s set voltage failed, err=%d\n",
+				__func__, name, ret);
 			goto out;
 		}
 	}
@@ -10168,7 +10204,7 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 
 	/* UFS device & link must be active before we enter in this function */
 	if (!ufshcd_is_ufs_dev_active(hba) || !ufshcd_is_link_active(hba))
-		goto set_vreg_lpm;
+		goto disable_clks;
 
 	if (ufshcd_is_runtime_pm(pm_op)) {
 		if (ufshcd_can_autobkops_during_suspend(hba)) {
@@ -10204,9 +10240,6 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	    ufshcd_is_hibern8_on_idle_allowed(hba))
 		hba->hibern8_on_idle.state = HIBERN8_ENTERED;
 
-set_vreg_lpm:
-	ufshcd_vreg_set_lpm(hba);
-
 disable_clks:
 	/*
 	 * Call vendor specific suspend callback. As these callbacks may access
@@ -10216,6 +10249,13 @@ disable_clks:
 	ret = ufshcd_vops_suspend(hba, pm_op);
 	if (ret)
 		goto set_link_active;
+
+	/* reset the connected UFS device during power down */
+	if (ufshcd_is_link_off(hba)) {
+		ret = ufshcd_assert_device_reset(hba);
+		if (ret)
+			goto set_link_active;
+	}
 
 	if (!ufshcd_is_link_active(hba))
 		ret = ufshcd_disable_clocks(hba, false);
@@ -10238,6 +10278,12 @@ disable_clks:
 	 * host controller transaction expected till resume.
 	 */
 	ufshcd_disable_irq(hba);
+
+	if (!hba->auto_bkops_enabled ||
+		!(req_dev_pwr_mode == UFS_ACTIVE_PWR_MODE &&
+		req_link_state == UIC_LINK_ACTIVE_STATE))
+		ufshcd_vreg_set_lpm(hba);
+
 	/* Put the host controller in low power mode if possible */
 	ufshcd_hba_vreg_set_lpm(hba);
 	goto out;
@@ -10250,6 +10296,7 @@ set_link_active:
 		ufshcd_set_link_active(hba);
 	} else if (ufshcd_is_link_off(hba)) {
 		ufshcd_update_error_stats(hba, UFS_ERR_VOPS_SUSPEND);
+		ufshcd_deassert_device_reset(hba);
 		ufshcd_host_reset_and_restore(hba);
 	}
 set_dev_active:
@@ -10289,17 +10336,19 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	old_link_state = hba->uic_link_state;
 
 	ufshcd_hba_vreg_set_hpm(hba);
+
+	ret = ufshcd_vreg_set_hpm(hba);
+	if (ret)
+		goto out;
+
 	/* Make sure clocks are enabled before accessing controller */
 	ret = ufshcd_enable_clocks(hba);
 	if (ret)
-		goto out;
+		goto disable_vreg;
 
 	/* enable the host irq as host controller would be active soon */
 	ufshcd_enable_irq(hba);
 
-	ret = ufshcd_vreg_set_hpm(hba);
-	if (ret)
-		goto disable_irq_and_vops_clks;
 	if (hba->restore) {
 		/* Configure UTRL and UTMRL base address registers */
 		ufshcd_writel(hba, lower_32_bits(hba->utrdl_dma_addr),
@@ -10320,7 +10369,7 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	 */
 	ret = ufshcd_vops_resume(hba, pm_op);
 	if (ret)
-		goto disable_vreg;
+		goto disable_irq_and_vops_clks;
 
 	if (hba->extcon &&
 	    (ufshcd_is_card_offline(hba) ||
@@ -10390,8 +10439,6 @@ set_old_link_state:
 		hba->hibern8_on_idle.state = HIBERN8_ENTERED;
 vendor_suspend:
 	ufshcd_vops_suspend(hba, pm_op);
-disable_vreg:
-	ufshcd_vreg_set_lpm(hba);
 disable_irq_and_vops_clks:
 	ufshcd_disable_irq(hba);
 	if (hba->clk_scaling.is_allowed)
@@ -10399,6 +10446,8 @@ disable_irq_and_vops_clks:
 	ufshcd_disable_clocks(hba, false);
 	if (ufshcd_is_clkgating_allowed(hba))
 		hba->clk_gating.state = CLKS_OFF;
+disable_vreg:
+	ufshcd_vreg_set_lpm(hba);
 out:
 	hba->pm_op_in_progress = 0;
 
@@ -10569,20 +10618,57 @@ EXPORT_SYMBOL(ufshcd_runtime_idle);
 
 int ufshcd_system_freeze(struct ufs_hba *hba)
 {
-	return ufshcd_system_suspend(hba);
+	int ret = 0;
+
+	/*
+	 * Run time resume the controller to make sure
+	 * the PM work queue threads do not try to resume
+	 * the child (scsi host), which leads to errors as
+	 * the controller is not yet resumed.
+	 */
+	pm_runtime_get_sync(hba->dev);
+	ret = ufshcd_system_suspend(hba);
+	pm_runtime_put_sync(hba->dev);
+
+	/*
+	 * Ensure no runtime PM operations take
+	 * place in the hibernation and restore sequence
+	 * on successful freeze operation.
+	 */
+	if (!ret)
+		pm_runtime_disable(hba->dev);
+
+	return ret;
 }
 EXPORT_SYMBOL(ufshcd_system_freeze);
 
 int ufshcd_system_restore(struct ufs_hba *hba)
 {
+	int ret = 0;
+
 	hba->restore = true;
-	return ufshcd_system_resume(hba);
+	ret = ufshcd_system_resume(hba);
+
+	/*
+	 * Now any runtime PM operations can be
+	 * allowed on successful restore operation
+	 */
+	if (!ret)
+		pm_runtime_enable(hba->dev);
+
+	return ret;
 }
 EXPORT_SYMBOL(ufshcd_system_restore);
 
 int ufshcd_system_thaw(struct ufs_hba *hba)
 {
-	return ufshcd_system_resume(hba);
+	int ret = 0;
+
+	ret = ufshcd_system_resume(hba);
+	if (!ret)
+		pm_runtime_enable(hba->dev);
+
+	return ret;
 }
 EXPORT_SYMBOL(ufshcd_system_thaw);
 
@@ -11021,12 +11107,15 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	INIT_WORK(&hba->eeh_work, ufshcd_exception_event_handler);
 	INIT_WORK(&hba->card_detect_work, ufshcd_card_detect_handler);
 	INIT_WORK(&hba->rls_work, ufshcd_rls_handler);
+	INIT_WORK(&hba->hibern8_on_idle_enable_work,
+			ufshcd_hibern8_on_idle_switch_work);
 
 	/* Initialize UIC command mutex */
 	mutex_init(&hba->uic_cmd_mutex);
 
 	/* Initialize mutex for device management commands */
 	mutex_init(&hba->dev_cmd.lock);
+	mutex_init(&hba->hibern8_on_idle.enable_mutex);
 
 	init_rwsem(&hba->lock);
 
