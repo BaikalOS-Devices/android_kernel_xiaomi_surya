@@ -407,7 +407,7 @@ __ATTR(_name, 0444, show_##_name, NULL)
 
 #define core_ctl_attr_rw(_name)			\
 static struct core_ctl_attr _name =		\
-__ATTR(_name, 0644, show_##_name, store_##_name)
+__ATTR(_name, 0664, show_##_name, store_##_name)
 
 core_ctl_attr_rw(min_cpus);
 core_ctl_attr_rw(max_cpus);
