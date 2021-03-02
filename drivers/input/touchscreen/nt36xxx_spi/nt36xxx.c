@@ -801,11 +801,11 @@ info_retry:
 #ifdef CHECK_TOUCH_VENDOR
 	switch (ts->touch_vendor_id) {
 	case TP_VENDOR_HUAXING:
-		snprintf(tp_info_buf, PAGE_SIZE, "[Vendor]huaxing,[FW]0x%02x,[IC]nt36672c\n", ts->fw_ver);
+		snprintf(tp_info_buf, 64, "[Vendor]huaxing,[FW]0x%02x,[IC]nt36672c\n", ts->fw_ver);
 		update_lct_tp_info(tp_info_buf, NULL);
 		break;
 	case TP_VENDOR_TIANMA:
-		snprintf(tp_info_buf, PAGE_SIZE, "[Vendor]tianma,[FW]0x%02x,[IC]nt36672c\n", ts->fw_ver);
+		snprintf(tp_info_buf, 64, "[Vendor]tianma,[FW]0x%02x,[IC]nt36672c\n", ts->fw_ver);
 		update_lct_tp_info(tp_info_buf, NULL);
 		break;
 	}
@@ -1386,7 +1386,7 @@ static void nvt_ts_worker(struct work_struct *work)
 	int32_t finger_cnt = 0;
 
 #if WAKEUP_GESTURE
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_NOFB
 	if (ts->dev_pm_suspend && ts->is_gesture_mode) {
 		ret = wait_for_completion_timeout(&ts->dev_pm_suspend_completion, msecs_to_jiffies(700));
 		if (!ret) {
@@ -2672,7 +2672,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 
 	nvt_irq_enable(true);
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_NOFB
 	ts->dev_pm_suspend = false;
 	init_completion(&ts->dev_pm_suspend_completion);
 #endif
@@ -3092,7 +3092,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 		NVT_LOG("Touch is already resume\n");
 #if NVT_TOUCH_WDT_RECOVERY
 		mutex_lock(&ts->lock);
-		nvt_update_firmware(ts->boot_update_firmware_name);
+		//nvt_update_firmware(ts->boot_update_firmware_name);
 		mutex_unlock(&ts->lock);
 #endif /* #if NVT_TOUCH_WDT_RECOVERY */
 		return 0;
@@ -3213,22 +3213,22 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 	struct nvt_ts_data *ts =
 		container_of(self, struct nvt_ts_data, drm_notif);
 
-	if (!evdata || (evdata->id != 0))
-		return 0;
+	//if (!evdata || (evdata->id != 0))
+	//	return 0;
 
 	if (evdata->data && ts) {
 		blank = evdata->data;
 		if (event == DRM_EARLY_EVENT_BLANK) {
+			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 			if (*blank == DRM_BLANK_POWERDOWN) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 				cancel_work_sync(&ts->resume_work);
 				nvt_ts_suspend(&ts->client->dev);
 			}
 		} else if (event == DRM_EVENT_BLANK) {
+			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 			if (*blank == DRM_BLANK_UNBLANK) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
-				//nvt_ts_resume(&ts->client->dev);
-				queue_work(ts->workqueue, &ts->resume_work);
+				nvt_ts_resume(&ts->client->dev);
+				//queue_work(ts->workqueue, &ts->resume_work);
 			}
 		}
 	}
@@ -3245,14 +3245,14 @@ static int nvt_fb_notifier_callback(struct notifier_block *self, unsigned long e
 
 	if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK) {
 		blank = evdata->data;
+		NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 		if (*blank == FB_BLANK_POWERDOWN) {
-			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 			nvt_ts_suspend(&ts->client->dev);
 		}
 	} else if (evdata && evdata->data && event == FB_EVENT_BLANK) {
 		blank = evdata->data;
+		NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 		if (*blank == FB_BLANK_UNBLANK) {
-			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 			nvt_ts_resume(&ts->client->dev);
 		}
 	}
@@ -3286,7 +3286,7 @@ static void nvt_ts_late_resume(struct early_suspend *h)
 }
 #endif
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_NOFB
 static int nvt_pm_suspend(struct device *dev)
 {
 	struct nvt_ts_data *ts = dev_get_drvdata(dev);
@@ -3335,7 +3335,7 @@ static struct spi_driver nvt_spi_driver = {
 	.driver = {
 		.name	= NVT_SPI_NAME,
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_NOFB
 		.pm = &nvt_dev_pm_ops,
 #endif
 #ifdef CONFIG_OF
