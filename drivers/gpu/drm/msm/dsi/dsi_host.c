@@ -459,12 +459,19 @@ static void dsi_bus_clk_disable(struct msm_dsi_host *msm_host)
 		clk_disable_unprepare(msm_host->bus_clks[i]);
 }
 
+
+static int_dsi_suspended = 0;
+
 int msm_dsi_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct msm_dsi *msm_dsi = platform_get_drvdata(pdev);
 	struct mipi_dsi_host *host = msm_dsi->host;
 	struct msm_dsi_host *msm_host = to_msm_dsi_host(host);
+
+    if( msm_pm_keep_awake() ) return 0;
+    if( int_dsi_suspended ) return 0;
+    int_dsi_suspended = 1;
 
 	if (!msm_host->cfg_hnd)
 		return 0;
@@ -480,6 +487,10 @@ int msm_dsi_runtime_resume(struct device *dev)
 	struct msm_dsi *msm_dsi = platform_get_drvdata(pdev);
 	struct mipi_dsi_host *host = msm_dsi->host;
 	struct msm_dsi_host *msm_host = to_msm_dsi_host(host);
+
+    if( msm_pm_keep_awake() ) return 0;
+    if( int_dsi_suspended ) return 0;
+    int_dsi_suspended = 1;
 
 	if (!msm_host->cfg_hnd)
 		return 0;

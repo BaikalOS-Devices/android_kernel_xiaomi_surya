@@ -1013,10 +1013,16 @@ static int mdp5_dev_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int _mdp5_suspended = 0;
+
 static __maybe_unused int mdp5_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mdp5_kms *mdp5_kms = platform_get_drvdata(pdev);
+
+    if( msm_pm_keep_awake() ) return 0;
+    if( _mdp5_suspended ) return 0;
+    _mdp5_suspended = 1;
 
 	DBG("");
 
@@ -1027,6 +1033,10 @@ static __maybe_unused int mdp5_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct mdp5_kms *mdp5_kms = platform_get_drvdata(pdev);
+
+    if( msm_pm_keep_awake() ) return 0;
+    if( !_mdp5_suspended ) return 0;
+    _mdp5_suspended = 0;
 
 	DBG("");
 

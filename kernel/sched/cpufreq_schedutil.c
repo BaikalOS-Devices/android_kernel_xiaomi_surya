@@ -292,7 +292,12 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 
     if( sg_policy->tunables->scaling_multiplier !=0  && sg_policy->tunables->scaling_divider !=0  ) 
     {
+        //int old = freq;
 	    freq = ((freq * sg_policy->tunables->scaling_multiplier)/sg_policy->tunables->scaling_divider) * util / max;
+      	//pr_info("res=%u, freq=%u, mul=%u, div=%u, util=%lu, max=%lu\n", freq, old, 
+        //        sg_policy->tunables->scaling_multiplier,sg_policy->tunables->scaling_divider,
+        //        util, max);
+
     } 
     else 
     {
@@ -403,7 +408,7 @@ static void sugov_walt_adjust(struct sugov_cpu *sg_cpu, unsigned long *util,
 	if (unlikely(!sysctl_sched_use_walt_cpu_util))
 		return;
 
-	is_hiload = (cpu_util >= mult_frac(sg_policy->avg_cap,
+	/*is_hiload = (cpu_util >= mult_frac(sg_policy->avg_cap,
 					   sg_policy->tunables->hispeed_load,
 					   100));
 
@@ -411,11 +416,17 @@ static void sugov_walt_adjust(struct sugov_cpu *sg_cpu, unsigned long *util,
 		*util = max(*util, sg_policy->hispeed_util);
 
 	if (is_hiload && nl >= mult_frac(cpu_util, NL_RATIO, 100))
-		*util = *max;
+		*util = *max;*/
+
+
+    int traget_load = TARGET_LOAD;
+    if( sg_policy->tunables->scaling_divider > 0 && sg_policy->tunables->scaling_multiplier > 0) {
+        traget_load = (sg_policy->tunables->scaling_divider*100)/sg_policy->tunables->scaling_multiplier;
+    }
 
 	if (sg_policy->tunables->pl) {
 		if (conservative_pl())
-			pl = mult_frac(pl, TARGET_LOAD, 100);
+			pl = mult_frac(pl, traget_load, 100);
 		*util = max(*util, pl);
 	}
 }
@@ -448,13 +459,13 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 		next_f = policy->cpuinfo.max_freq;
 	} else {
 		sugov_get_util(&util, &max, sg_cpu->cpu);
-		if (sg_policy->max != max) {
+		/*if (sg_policy->max != max) {
 			sg_policy->max = max;
 			hs_util = freq_to_util(sg_policy,
 					sg_policy->tunables->hispeed_freq);
 			hs_util = mult_frac(hs_util, TARGET_LOAD, 100);
 			sg_policy->hispeed_util = hs_util;
-		}
+		}*/
 
 		sg_cpu->util = util;
 		sg_cpu->max = max;
@@ -552,13 +563,13 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 
 	raw_spin_lock(&sg_policy->update_lock);
 
-	if (sg_policy->max != max) {
+	/*if (sg_policy->max != max) {
 		sg_policy->max = max;
 		hs_util = freq_to_util(sg_policy,
 					sg_policy->tunables->hispeed_freq);
 		hs_util = mult_frac(hs_util, TARGET_LOAD, 100);
 		sg_policy->hispeed_util = hs_util;
-	}
+	}*/
 
 	sg_cpu->util = util;
 	sg_cpu->max = max;

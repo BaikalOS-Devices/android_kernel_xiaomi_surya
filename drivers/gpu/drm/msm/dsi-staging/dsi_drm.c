@@ -240,7 +240,7 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		return;
 	}
 
-	drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+	//drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 
 	atomic_set(&c_bridge->display->panel->esd_recovery_pending, 0);
 
@@ -284,7 +284,7 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		(void)dsi_display_unprepare(c_bridge->display);
 	}
 
-	drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+	//drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
 
 	SDE_ATRACE_END("dsi_display_enable");
 
@@ -477,10 +477,21 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
 	struct drm_device *dev = bridge->dev;
 	int event = 0;
-	if (dev->doze_state == DRM_BLANK_UNBLANK) {
-		dev->doze_state = DRM_BLANK_POWERDOWN;
+	if (dev->doze_state == DRM_BLANK_UNBLANK || 
+        dev->doze_state == DRM_BLANK_LP1 || 
+        dev->doze_state == DRM_BLANK_LP2 ) {
+		//dev->doze_state = DRM_BLANK_POWERDOWN;
 		pr_err("%s wrong doze state\n", __func__);
+        dump_stack();
+        return;
 	}
+
+    if( msm_pm_keep_awake() ) {
+		pr_err("%s wrong awake state\n", __func__);
+        dump_stack();
+        return;
+    }
+
 
 	event = dev->doze_state;
 	g_notify_data.data = &event;
@@ -490,7 +501,7 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 		return;
 	}
 
-	drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+	//drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 
 	SDE_ATRACE_BEGIN("dsi_bridge_post_disable");
 	SDE_ATRACE_BEGIN("dsi_display_disable");
@@ -512,7 +523,7 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 	}
 	SDE_ATRACE_END("dsi_bridge_post_disable");
 
-	drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+	//drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
 	if (c_bridge->display->is_prim_display)
 		atomic_set(&prim_panel_is_on, false);
 }

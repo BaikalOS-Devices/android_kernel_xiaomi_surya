@@ -338,10 +338,15 @@ static const struct of_device_id dt_match[] = {
 };
 
 #ifdef CONFIG_PM
+static int _gpu_suspended = 0;
 static int adreno_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct msm_gpu *gpu = platform_get_drvdata(pdev);
+
+    if( msm_pm_keep_awake() ) return 0;
+    if( !_gpu_suspended ) return 0;
+    _gpu_suspended = 0;
 
 	return gpu->funcs->pm_resume(gpu);
 }
@@ -350,6 +355,10 @@ static int adreno_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct msm_gpu *gpu = platform_get_drvdata(pdev);
+
+    if( msm_pm_keep_awake() ) return 0;
+    if( _gpu_suspended ) return 0;
+    _gpu_suspended = 1;
 
 	return gpu->funcs->pm_suspend(gpu);
 }

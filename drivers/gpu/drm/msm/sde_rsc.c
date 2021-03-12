@@ -30,6 +30,7 @@
 #include "sde_rsc_priv.h"
 #include "sde_dbg.h"
 #include "sde_trace.h"
+#include "msm_drv.h"
 
 #define SDE_RSC_DRV_DBG_NAME		"sde_rsc_drv"
 #define SDE_RSC_WRAPPER_DBG_NAME	"sde_rsc_wrapper"
@@ -1913,6 +1914,8 @@ static int sde_rsc_pm_freeze_late(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct sde_rsc_priv *rsc = platform_get_drvdata(pdev);
+
+    if( msm_pm_keep_awake() ) return 0;
 
 	rsc->need_hwinit = true;
 

@@ -1915,9 +1915,24 @@ static struct drm_driver msm_driver = {
 	.patchlevel         = MSM_VERSION_PATCHLEVEL,
 };
 
+
 #ifdef CONFIG_PM_SLEEP
+
+static int _keep_awake = 0;
+static int _pm_suspend_active = 0;
+static int _pm_runtime_suspend_active = 0;
+
+void msm_pm_set_keep_awake(int keep) {
+    _keep_awake = keep;
+}
+
+int msm_pm_keep_awake() {
+    return _keep_awake;
+}
+
 static int msm_pm_prepare(struct device *dev)
 {
+    if( msm_pm_keep_awake() ) return 0;
 	atomic_inc(&resume_pending);
 	return 0;
 }
@@ -1942,6 +1957,12 @@ static int msm_pm_suspend(struct device *dev)
 	if (!ddev || !ddev->dev_private)
 		return -EINVAL;
 
+    if( msm_pm_keep_awake() ) return 0;
+    if( ddev->state_on ) return 0;
+    if( _pm_suspend_active ) return 0;
+
+    _pm_suspend_active = 1;
+
 	priv = ddev->dev_private;
 	kms = priv->kms;
 
@@ -1959,6 +1980,9 @@ static int msm_pm_resume(struct device *dev)
 	struct drm_device *ddev;
 	struct msm_drm_private *priv;
 	struct msm_kms *kms;
+
+    if( !_pm_suspend_active ) return 0;
+    _pm_suspend_active = 0;
 
 	if (!dev)
 		return -EINVAL;
@@ -1986,6 +2010,10 @@ static int msm_runtime_suspend(struct device *dev)
 	struct drm_device *ddev = dev_get_drvdata(dev);
 	struct msm_drm_private *priv = ddev->dev_private;
 
+    if( msm_pm_keep_awake() ) return 0;
+    if( _pm_runtime_suspend_active ) return 0;
+    _pm_runtime_suspend_active = 1;
+
 	DBG("");
 
 	if (priv->mdss)
@@ -1998,6 +2026,10 @@ static int msm_runtime_resume(struct device *dev)
 {
 	struct drm_device *ddev = dev_get_drvdata(dev);
 	struct msm_drm_private *priv = ddev->dev_private;
+
+
+    if( !_pm_runtime_suspend_active ) return 0;
+    _pm_runtime_suspend_active = 0;
 
 	DBG("");
 

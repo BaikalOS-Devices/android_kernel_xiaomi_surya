@@ -2905,6 +2905,9 @@ static int dp_pm_prepare(struct device *dev)
 	struct dp_display_private *dp = container_of(g_dp_display,
 			struct dp_display_private, dp_display);
 
+    if( msm_pm_keep_awake() ) return 0;
+    if( dp->suspended ) return 0;
+
 	dp->suspended = true;
 
 	dp_display_set_mst_state(g_dp_display, PM_SUSPEND);
@@ -2929,6 +2932,9 @@ static void dp_pm_complete(struct device *dev)
 {
 	struct dp_display_private *dp = container_of(g_dp_display,
 			struct dp_display_private, dp_display);
+
+    if( msm_pm_keep_awake() ) return;
+    if( !dp->suspended) return;
 
 	dp_display_set_mst_state(g_dp_display, PM_DEFAULT);
 

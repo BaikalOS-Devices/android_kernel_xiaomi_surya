@@ -1265,44 +1265,69 @@ int dsi_display_set_power(struct drm_connector *connector,
 	} else {
 		dev = connector->dev;
 		event = dev->doze_state;
+        
 	}
 
 	g_notify_data.data = &event;
 
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
-		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
-		rc = dsi_panel_set_lp1(display->panel);
-		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+        if( dev->state_on == 0 ) {
+            event = DRM_BLANK_UNBLANK;
+            g_notify_data.data = &event;
+    		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+    		rc = dsi_panel_set_lp1(display->panel);
+    		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+        }
+        dev->state_on = 1;
+        msm_pm_set_keep_awake(1);
 		break;
 	case SDE_MODE_DPMS_LP2:
-		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
-		rc = dsi_panel_set_lp2(display->panel);
-		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+        if( dev->state_on == 0 ) {
+            event = DRM_BLANK_UNBLANK;
+            g_notify_data.data = &event;
+    		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+    		rc = dsi_panel_set_lp2(display->panel);
+    		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+        }
+        dev->state_on = 1;
+        msm_pm_set_keep_awake(1);
 		break;
 	case SDE_MODE_DPMS_ON:
-		if (display->panel->power_mode == SDE_MODE_DPMS_LP1 ||
-			display->panel->power_mode == SDE_MODE_DPMS_LP2) {
+		//if (display->panel->power_mode == SDE_MODE_DPMS_LP1 ||
+		//	display->panel->power_mode == SDE_MODE_DPMS_LP2) {
+        if( dev->state_on == 0 ) {
+            event = DRM_BLANK_UNBLANK;
+            g_notify_data.data = &event;
 			drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 			rc = dsi_panel_set_nolp(display->panel);
 			drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
-		}
+        }
+        dev->state_on = 1;
+        msm_pm_set_keep_awake(1);
+		//}
 		break;
 	case SDE_MODE_DPMS_OFF:
-	default:
-		if (dev->pre_state != SDE_MODE_DPMS_LP1 &&
-                                        dev->pre_state != SDE_MODE_DPMS_LP2)
-			break;
+		//if (dev->pre_state != SDE_MODE_DPMS_LP1 &&
+        //    dev->pre_state != SDE_MODE_DPMS_LP2)
+		//	break;
+        if( dev->state_on == 1 ) {
+            event = DRM_BLANK_POWERDOWN;
+            g_notify_data.data = &event;
+    		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+    		rc = dsi_panel_set_nolp(display->panel);
+    		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+        }
+        dev->state_on = 0;
+        msm_pm_set_keep_awake(0);
 
-		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
-		rc = dsi_panel_set_nolp(display->panel);
-		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+	default:
 		return rc;
 	}
 
 	dev->pre_state = power_mode;
 
-	pr_debug("Power mode transition from %d to %d %s",
+	pr_info("Power mode transition from %d to %d %s",
 		 display->panel->power_mode, power_mode,
 		 rc ? "failed" : "successful");
 	if (!rc)
@@ -5746,6 +5771,7 @@ static int dsi_display_bind(struct device *dev,
 	}
 
 	pr_info("Successfully bind display panel '%s'\n", display->name);
+    drm->state_on = 0;
 	display->drm_dev = drm;
 
 	display_for_each_ctrl(i, display) {

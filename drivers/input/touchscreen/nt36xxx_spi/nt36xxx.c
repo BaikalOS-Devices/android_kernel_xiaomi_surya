@@ -1558,6 +1558,8 @@ return:
 static irqreturn_t nvt_ts_work_func(int irq, void *data)
 {
 	struct nvt_ts_data *ts = data;
+	pm_wakeup_event(&ts->client->dev, 500);
+    NVT_LOG("IRQ handler\n");
 	queue_work(ts->coord_workqueue, &ts->irq_work);
 	return IRQ_HANDLED;
 }
@@ -3213,8 +3215,10 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 	struct nvt_ts_data *ts =
 		container_of(self, struct nvt_ts_data, drm_notif);
 
-	if (!evdata || (evdata->id != 0))
+	if (!evdata /*|| (evdata->id != 0)*/)
 		return 0;
+
+	NVT_LOG("evdata.id = %d\n", evdata->id);
 
 	if (evdata->data && ts) {
 		blank = evdata->data;

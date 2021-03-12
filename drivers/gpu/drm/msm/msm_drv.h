@@ -887,6 +887,9 @@ struct drm_framebuffer * msm_alloc_stolen_fb(struct drm_device *dev,
 struct drm_fb_helper *msm_fbdev_init(struct drm_device *dev);
 void msm_fbdev_free(struct drm_device *dev);
 
+void msm_pm_set_keep_awake(int keep);
+int msm_pm_keep_awake(void);
+
 struct hdmi;
 #ifdef CONFIG_DRM_MSM_HDMI
 int msm_hdmi_modeset_init(struct hdmi *hdmi, struct drm_device *dev,
