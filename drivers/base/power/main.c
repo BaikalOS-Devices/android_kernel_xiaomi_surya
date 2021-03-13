@@ -1516,8 +1516,8 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	 * for it, this is equivalent to the device signaling wakeup, so the
 	 * system suspend operation should be aborted.
 	 */
-	if (pm_runtime_barrier(dev) && device_may_wakeup(dev))
-		pm_wakeup_event(dev, 0);
+	//if (pm_runtime_barrier(dev) && device_may_wakeup(dev))
+	pm_runtime_barrier(dev);
 
 	if (pm_wakeup_pending()) {
 		dev->power.direct_complete = false;
