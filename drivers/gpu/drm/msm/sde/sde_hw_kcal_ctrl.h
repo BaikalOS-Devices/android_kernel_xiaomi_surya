@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-#define SDE_HW_KCAL_ENABLED		(1)
+#define SDE_HW_KCAL_ENABLED		(0)
 
 #define SDE_HW_KCAL_MIN_VALUE		(20)
 #define SDE_HW_KCAL_INIT_RED		(256)
