@@ -1917,7 +1917,7 @@ QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 		    sta_ctx->conn_info.uIsAuthenticated)
 			wake_lock = hdd_is_rx_wake_lock_needed(skb);
 
-		if (wake_lock) {
+		if (wake_lock && hdd_ctx->config->rx_wakelock_timeout) {
 			cds_host_diag_log_work(&hdd_ctx->rx_wake_lock,
 						   hdd_ctx->config->rx_wakelock_timeout,
 						   WIFI_POWER_EVENT_WAKELOCK_HOLD_RX);
