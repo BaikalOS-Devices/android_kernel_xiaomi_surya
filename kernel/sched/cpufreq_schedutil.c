@@ -27,6 +27,8 @@ struct sugov_tunables {
 	unsigned int		up_rate_limit_us;
 	unsigned int		down_rate_limit_us;
 	bool iowait_boost_enable;
+    unsigned int scaling_multiplier;
+    unsigned int scaling_divider;
 };
 
 struct sugov_policy {
@@ -222,9 +224,22 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
-				policy->cpuinfo.max_freq : policy->cur;
+				policy->max : policy->cur;
 
-	freq = (freq + (freq >> 2)) * util / max;
+
+    if( sg_policy->tunables->scaling_multiplier !=0  && sg_policy->tunables->scaling_divider !=0  ) 
+    {
+        //int old = freq;
+	    freq = ((freq * sg_policy->tunables->scaling_multiplier)/sg_policy->tunables->scaling_divider) * util / max;
+      	//pr_info("res=%u, freq=%u, mul=%u, div=%u, util=%lu, max=%lu\n", freq, old, 
+        //        sg_policy->tunables->scaling_multiplier,sg_policy->tunables->scaling_divider,
+        //        util, max);
+
+    } 
+    else 
+    {
+	    freq = (freq + (freq >> 2)) * util / max;
+    }
 
 	if (freq == sg_policy->cached_raw_freq && !sg_policy->need_freq_update)
 		return sg_policy->next_freq;
@@ -359,7 +374,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	if (flags & SCHED_CPUFREQ_DL) {
 		/* clear cache when it's bypassed */
 		sg_policy->cached_raw_freq = 0;
-		next_f = policy->cpuinfo.max_freq;
+		next_f = policy->max;
 	} else {
 		sugov_get_util(&util, &max, sg_cpu->cpu, time);
 
@@ -417,7 +432,7 @@ static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu, u64 time)
 		if (j_sg_cpu->flags & SCHED_CPUFREQ_DL) {
 			/* clear cache when it's bypassed */
 			sg_policy->cached_raw_freq = 0;
-			return policy->cpuinfo.max_freq;
+			return policy->max;
 		}
 
 		j_util = j_sg_cpu->util;
@@ -462,7 +477,7 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 		if (flags & SCHED_CPUFREQ_DL) {
 			/* clear cache when it's bypassed */
 			sg_policy->cached_raw_freq = 0;
-			next_f = sg_policy->policy->cpuinfo.max_freq;
+			next_f = sg_policy->policy->max;
 		} else {
 			next_f = sugov_next_freq_shared(sg_cpu, time);
 		}
@@ -629,14 +644,63 @@ static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+
+static ssize_t scaling_multiplier_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->scaling_multiplier);
+}
+
+static ssize_t scaling_multiplier_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	unsigned int val;
+
+	if (kstrtouint(buf, 10, &val))
+		return -EINVAL;
+
+	tunables->scaling_multiplier = val;
+
+	return count;
+}
+
+static ssize_t scaling_divider_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->scaling_divider);
+}
+
+static ssize_t scaling_divider_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	unsigned int val;
+
+	if (kstrtouint(buf, 10, &val))
+		return -EINVAL;
+
+	tunables->scaling_divider = val;
+
+	return count;
+}
+
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
+static struct governor_attr scaling_multiplier = __ATTR_RW(scaling_multiplier);
+static struct governor_attr scaling_divider = __ATTR_RW(scaling_divider);
 
 static struct attribute *sugov_attributes[] = {
 	&up_rate_limit_us.attr,
 	&down_rate_limit_us.attr,
 	&iowait_boost_enable.attr,
+    &scaling_multiplier.attr,
+    &scaling_divider.attr,
 	NULL
 };
 
@@ -905,7 +969,7 @@ static int sugov_start(struct cpufreq_policy *policy)
 		sg_cpu->cpu = cpu;
 		sg_cpu->sg_policy = sg_policy;
 		sg_cpu->flags = SCHED_CPUFREQ_DL;
-		sg_cpu->iowait_boost_max = policy->cpuinfo.max_freq;
+		sg_cpu->iowait_boost_max = policy->max;
 	}
 
 	for_each_cpu(cpu, policy->cpus) {
