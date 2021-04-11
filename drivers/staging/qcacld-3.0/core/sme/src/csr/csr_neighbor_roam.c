@@ -225,8 +225,10 @@ QDF_STATUS csr_neighbor_roam_update_config(struct mac_context *mac_ctx,
 		sme_debug("CONNECTED, send update cfg cmd");
 		csr_roam_update_cfg(mac_ctx, session_id, reason);
 	}
+#ifdef WLAN_DEBUG
 	sme_debug("LFR config for %s changed from %d to %d",
 			lfr_get_config_item_string(reason), old_value, value);
+#endif
 	return QDF_STATUS_SUCCESS;
 }
 

@@ -636,10 +636,12 @@ static QDF_STATUS lim_send_tdls_dis_req_frame(struct mac_context *mac,
 	}
 #endif
 
+#ifdef WLAN_DEBUG
 	pe_debug("[TDLS] action: %d (%s) -AP-> OTA peer="QDF_MAC_ADDR_FMT,
 		TDLS_DISCOVERY_REQUEST,
 		lim_trace_tdls_action_string(TDLS_DISCOVERY_REQUEST),
 		QDF_MAC_ADDR_REF(peer_mac.bytes));
+#endif
 
 	mac->lim.tdls_frm_session_id = pe_session->smeSessionId;
 	lim_diag_mgmt_tx_event_report(mac, (tpSirMacMgmtHdr) pFrame,
@@ -941,10 +943,13 @@ static QDF_STATUS lim_send_tdls_dis_rsp_frame(struct mac_context *mac,
 		qdf_mem_copy(pFrame + sizeof(tSirMacMgmtHdr) + nPayload, addIe,
 			     addIeLen);
 	}
+
+#ifdef WLAN_DEBUG
 	pe_debug("[TDLS] action: %d (%s) -DIRECT-> OTA peer="QDF_MAC_ADDR_FMT,
 		TDLS_DISCOVERY_RESPONSE,
 		lim_trace_tdls_action_string(TDLS_DISCOVERY_RESPONSE),
 		QDF_MAC_ADDR_REF(peer_mac.bytes));
+#endif
 
 	mac->lim.tdls_frm_session_id = pe_session->smeSessionId;
 	lim_diag_mgmt_tx_event_report(mac, (tpSirMacMgmtHdr) pFrame,
@@ -1318,10 +1323,12 @@ QDF_STATUS lim_send_tdls_link_setup_req_frame(struct mac_context *mac,
 			     addIeLen);
 	}
 
+#ifdef WLAN_DEBUG
 	pe_debug("[TDLS] action: %d (%s) -AP-> OTA peer="QDF_MAC_ADDR_FMT,
 		TDLS_SETUP_REQUEST,
 		lim_trace_tdls_action_string(TDLS_SETUP_REQUEST),
 		QDF_MAC_ADDR_REF(peer_mac.bytes));
+#endif
 
 	mac->lim.tdls_frm_session_id = pe_session->smeSessionId;
 	lim_diag_mgmt_tx_event_report(mac, (tpSirMacMgmtHdr) pFrame,
@@ -1509,12 +1516,15 @@ QDF_STATUS lim_send_tdls_teardown_frame(struct mac_context *mac,
 				    padLen - MIN_VENDOR_SPECIFIC_IE_SIZE);
 	}
 #endif
+
+#ifdef WLAN_DEBUG
 	pe_debug("[TDLS] action: %d (%s) -%s-> OTA peer="QDF_MAC_ADDR_FMT,
 		TDLS_TEARDOWN,
 		lim_trace_tdls_action_string(TDLS_TEARDOWN),
 		((reason == eSIR_MAC_TDLS_TEARDOWN_PEER_UNREACHABLE) ? "AP" :
 		    "DIRECT"),
 		QDF_MAC_ADDR_REF(peer_mac.bytes));
+#endif
 
 	mac->lim.tdls_frm_session_id = pe_session->smeSessionId;
 	lim_diag_mgmt_tx_event_report(mac, (tpSirMacMgmtHdr) pFrame,
@@ -1771,10 +1781,12 @@ static QDF_STATUS lim_send_tdls_setup_rsp_frame(struct mac_context *mac,
 			     addIeLen);
 	}
 
+#ifdef WLAN_DEBUG
 	pe_debug("[TDLS] action: %d (%s) -AP-> OTA peer="QDF_MAC_ADDR_FMT,
 		TDLS_SETUP_RESPONSE,
 		lim_trace_tdls_action_string(TDLS_SETUP_RESPONSE),
 		QDF_MAC_ADDR_REF(peer_mac.bytes));
+#endif
 
 	mac->lim.tdls_frm_session_id = pe_session->smeSessionId;
 	lim_diag_mgmt_tx_event_report(mac, (tpSirMacMgmtHdr) pFrame,
@@ -1978,10 +1990,12 @@ QDF_STATUS lim_send_tdls_link_setup_cnf_frame(struct mac_context *mac,
 	}
 #endif
 
+#ifdef WLAN_DEBUG
 	pe_debug("[TDLS] action: %d (%s) -AP-> OTA peer="QDF_MAC_ADDR_FMT,
 		TDLS_SETUP_CONFIRM,
 		lim_trace_tdls_action_string(TDLS_SETUP_CONFIRM),
 	       QDF_MAC_ADDR_REF(peer_mac.bytes));
+#endif
 
 	mac->lim.tdls_frm_session_id = pe_session->smeSessionId;
 	lim_diag_mgmt_tx_event_report(mac, (tpSirMacMgmtHdr) pFrame,

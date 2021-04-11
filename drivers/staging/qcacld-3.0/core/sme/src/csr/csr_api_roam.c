@@ -3889,6 +3889,7 @@ csr_connect_info(struct mac_context *mac_ctx,
 	conn_stats.result_code = (u2 == eCSR_ROAM_RESULT_ASSOCIATED) ? 1 : 0;
 	conn_stats.reason_code = 0;
 	conn_stats.op_freq = conn_profile->op_freq;
+#ifdef WLAN_DEBUG
 	sme_nofl_debug("+---------CONNECTION INFO START------------+");
 	sme_nofl_debug("VDEV-ID: %d self_mac:"QDF_MAC_ADDR_FMT, session->vdev_id,
 		       QDF_MAC_ADDR_REF(session->self_mac_addr.bytes));
@@ -3907,6 +3908,7 @@ csr_connect_info(struct mac_context *mac_ctx,
 		       conn_stats.qos_capability,
 		       (conn_stats.result_code ? "yes" : "no"));
 	sme_nofl_debug("+---------CONNECTION INFO END------------+");
+#endif
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&conn_stats, EVENT_WLAN_CONN_STATS_V2);
 }
@@ -13634,11 +13636,14 @@ QDF_STATUS csr_roam_stop_wait_for_key_timer(struct mac_context *mac)
 	tpCsrNeighborRoamControlInfo pNeighborRoamInfo =
 		&mac->roam.neighborRoamInfo[vdev_id];
 
+#ifdef WLAN_DEBUG
 	sme_debug("WaitForKey timer stopped in state: %s sub-state: %s",
 		mac_trace_get_neighbour_roam_state(pNeighborRoamInfo->
 						   neighborRoamState),
 		mac_trace_getcsr_roam_sub_state(mac->roam.
 						curSubState[vdev_id]));
+#endif
+
 	if (csr_neighbor_roam_is_handoff_in_progress(mac, vdev_id)) {
 		/*
 		 * Enable heartbeat timer when hand-off is in progress

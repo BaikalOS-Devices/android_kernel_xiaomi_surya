@@ -5756,7 +5756,9 @@ static int __wlan_hdd_cfg80211_disable_dfs_chan_scan(struct wiphy *wiphy,
 	no_dfs_flag = nla_get_u32(
 		tb[QCA_WLAN_VENDOR_ATTR_SET_NO_DFS_FLAG]);
 
+#ifdef WLAN_DEBUG
 	hdd_debug("DFS flag: %d", no_dfs_flag);
+#endif
 
 	if (no_dfs_flag > 1) {
 		hdd_err("invalid value of dfs flag");
@@ -21055,12 +21057,14 @@ static inline void hdd_dump_connect_req(struct hdd_adapter *adapter,
 		hdd_nofl_debug("prev BSSID "QDF_MAC_ADDR_FMT,
 				QDF_MAC_ADDR_REF(req->prev_bssid));
 
+#ifdef WLAN_DEBUG
 	for (i = 0; i < req->crypto.n_akm_suites; i++)
 		hdd_nofl_debug("akm[%d] = %x", i, req->crypto.akm_suites[i]);
 
 	for (i = 0; i < req->crypto.n_ciphers_pairwise; i++)
 		hdd_nofl_debug("cipher_pairwise[%d] = %x", i,
 			       req->crypto.ciphers_pairwise[i]);
+#endif
 }
 
 /**

@@ -245,6 +245,7 @@ void wlan_roam_debug_dump_table(void)
 				    0xffffffff);
 		delta = delta / (DEBUG_CLOCK_TICKS_PER_MSEC >> 8);
 
+#ifdef WLAN_DEBUG
 		roam_debug("index = %5d timestamp = 0x%016llx delta ms = %-12u",
 			   i, dbg_rec->time, delta);
 		roam_debug("info = %-24s vdev_id = %-3d mac addr = "QDF_MAC_ADDR_FMT,
@@ -255,6 +256,7 @@ void wlan_roam_debug_dump_table(void)
 			   (int8_t)dbg_rec->peer_id);
 		roam_debug("arg1 = 0x%-8x arg2 = 0x%-8x", dbg_rec->arg1,
 			   dbg_rec->arg2);
+#endif
 	} while (i != current_index);
 }
 qdf_export_symbol(wlan_roam_debug_dump_table);

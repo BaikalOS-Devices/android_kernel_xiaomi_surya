@@ -5522,8 +5522,10 @@ void lim_send_frame(struct mac_context *mac_ctx, uint8_t vdev_id, uint8_t *buf,
 	tpSirMacFrameCtl fc = (tpSirMacFrameCtl)buf;
 	tpSirMacMgmtHdr mac_hdr = (tpSirMacMgmtHdr)buf;
 
+#ifdef WLAN_DEBUG
 	pe_debug("sending fc->type: %d fc->subType: %d",
 		 fc->type, fc->subType);
+#endif
 
 	lim_add_mgmt_seq_num(mac_ctx, mac_hdr);
 	qdf_status = cds_packet_alloc(buf_len, (void **)&frame,
