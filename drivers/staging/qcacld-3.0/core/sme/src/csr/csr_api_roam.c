@@ -4550,6 +4550,7 @@ static void csr_dump_connection_stats(tpAniSirGlobal mac_ctx,
 	     diag_enc_type_from_csr_type(conn_profile->EncryptionType);
 	conn_stats.result_code = (u2 == eCSR_ROAM_RESULT_ASSOCIATED) ? 1 : 0;
 	conn_stats.reason_code = 0;
+#ifdef WLAN_DEBUG
 	sme_nofl_debug("+---------CONNECTION INFO START------------+");
 	sme_nofl_debug("VDEV-ID: %d self_mac:%pM", session->sessionId,
 		       session->selfMacAddr.bytes);
@@ -4567,6 +4568,7 @@ static void csr_dump_connection_stats(tpAniSirGlobal mac_ctx,
 		       conn_stats.qos_capability,
 		       (conn_stats.result_code ? "yes" : "no"));
 	sme_nofl_debug("+---------CONNECTION INFO END------------+");
+#endif
 
 	WLAN_HOST_DIAG_EVENT_REPORT(&conn_stats, EVENT_WLAN_CONN_STATS_V2);
 }
@@ -14099,12 +14101,14 @@ static QDF_STATUS csr_roam_start_wait_for_key_timer(
 				     pMac->roam.WaitForKeyTimerInfo.
 				     vdev_id)) {
 		/* Disable heartbeat timer when hand-off is in progress */
+#ifdef WLAN_DEBUG
 		sme_debug("disabling HB timer in state: %s sub-state: %s",
 			mac_trace_get_neighbour_roam_state(
 				pNeighborRoamInfo->neighborRoamState),
 			mac_trace_getcsr_roam_sub_state(
 				pMac->roam.curSubState[pMac->roam.
 					WaitForKeyTimerInfo.vdev_id]));
+#endif
 		cfg_set_int(pMac, WNI_CFG_HEART_BEAT_THRESHOLD, 0);
 	}
 	sme_debug("csrScanStartWaitForKeyTimer");
@@ -14120,7 +14124,6 @@ QDF_STATUS csr_roam_stop_wait_for_key_timer(tpAniSirGlobal pMac)
 	tpCsrNeighborRoamControlInfo pNeighborRoamInfo =
 		&pMac->roam.neighborRoamInfo[pMac->roam.WaitForKeyTimerInfo.
 					     vdev_id];
-#endif
 
 	sme_debug("WaitForKey timer stopped in state: %s sub-state: %s",
 		mac_trace_get_neighbour_roam_state(pNeighborRoamInfo->
@@ -14129,6 +14132,7 @@ QDF_STATUS csr_roam_stop_wait_for_key_timer(tpAniSirGlobal pMac)
 						curSubState[pMac->roam.
 							    WaitForKeyTimerInfo.
 							    vdev_id]));
+#endif
 	if (csr_neighbor_roam_is_handoff_in_progress(pMac,
 				pMac->roam.WaitForKeyTimerInfo.vdev_id)) {
 		/*

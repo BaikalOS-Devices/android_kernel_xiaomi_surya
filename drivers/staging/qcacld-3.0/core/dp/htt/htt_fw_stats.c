@@ -133,13 +133,17 @@ static char *bw_str_arr[] = {"20MHz", "40MHz", "80MHz", "160MHz"};
 static void htt_t2h_stats_tx_rate_stats_print(wlan_dbg_tx_rate_info_t *
 					      tx_rate_info, int concise)
 {
+#ifdef WLAN_DEBUG
 	tx_rate_stats_print_cmn(tx_rate_info, concise);
+#endif
 }
 
 static void htt_t2h_stats_tx_rate_stats_print_v2(wlan_dbg_tx_rate_info_v2_t *
 					      tx_rate_info, int concise)
 {
+#ifdef WLAN_DEBUG
 	tx_rate_stats_print_cmn(tx_rate_info, concise);
+#endif
 }
 
 /*
@@ -270,13 +274,17 @@ static void htt_t2h_stats_tx_rate_stats_print_v2(wlan_dbg_tx_rate_info_v2_t *
 static void htt_t2h_stats_rx_rate_stats_print(wlan_dbg_rx_rate_info_t *
 					      rx_phy_info, int concise)
 {
+#ifdef WLAN_DEBUG
 	rx_rate_stats_print_cmn(rx_phy_info, concise);
+#endif
 }
 
 static void htt_t2h_stats_rx_rate_stats_print_v2(wlan_dbg_rx_rate_info_v2_t *
 					      rx_phy_info, int concise)
 {
+#ifdef WLAN_DEBUG
 	rx_rate_stats_print_cmn(rx_phy_info, concise);
+#endif
 }
 
 static void
@@ -286,7 +294,6 @@ htt_t2h_stats_pdev_stats_print(struct wlan_dbg_stats *wlan_pdev_stats,
 #ifdef WLAN_DEBUG
 	struct wlan_dbg_tx_stats *tx = &wlan_pdev_stats->tx;
 	struct wlan_dbg_rx_stats *rx = &wlan_pdev_stats->rx;
-#endif
 
 	qdf_nofl_info("WAL Pdev stats:");
 	qdf_nofl_info("\n### Tx ###");
@@ -360,6 +367,7 @@ htt_t2h_stats_pdev_stats_print(struct wlan_dbg_stats *wlan_pdev_stats,
 	qdf_nofl_info("phy_errs dropped  :\t%d", rx->phy_err_drop);
 	/* Number of mpdu errors - FCS, MIC, ENC etc. */
 	qdf_nofl_info("mpdu_errs         :\t%d", rx->mpdu_errs);
+#endif
 
 }
 
@@ -367,6 +375,7 @@ static void
 htt_t2h_stats_rx_reorder_stats_print(struct rx_reorder_stats *stats_ptr,
 				     int concise)
 {
+#ifdef WLAN_DEBUG
 	qdf_nofl_info("Rx reorder statistics:");
 	qdf_nofl_info("  %u non-QoS frames received",
 			stats_ptr->deliver_non_qos);
@@ -475,12 +484,14 @@ htt_t2h_stats_rx_reorder_stats_print(struct rx_reorder_stats *stats_ptr,
 			stats_ptr->dup_past_within_window);
 	qdf_nofl_info("  %u  MPDUs with SN in the past & outside BA window",
 			stats_ptr->dup_past_outside_window);
+#endif
 }
 
 static void
 htt_t2h_stats_rx_rem_buf_stats_print(
 	struct rx_remote_buffer_mgmt_stats *stats_ptr, int concise)
 {
+#ifdef WLAN_DEBUG
 	qdf_nofl_info("Rx Remote Buffer Statistics:");
 	qdf_nofl_info("  %u MSDU's reaped for Rx processing",
 			stats_ptr->remote_reaped);
@@ -508,12 +519,14 @@ htt_t2h_stats_rx_rem_buf_stats_print(
 			stats_ptr->fw_indices_equal);
 	qdf_nofl_info("  %u times f/w has no remote buffers to post to MAC",
 			stats_ptr->host_no_bufs);
+#endif
 }
 
 static void
 htt_t2h_stats_txbf_info_buf_stats_print(
 	struct wlan_dbg_txbf_data_stats *stats_ptr)
 {
+#ifdef WLAN_DEBUG
 	qdf_nofl_info("TXBF data Statistics:");
 	qdf_nofl_info("tx_txbf_vht (0..9): %u, %u, %u, %u, %u, %u, %u, %u, %u, %d",
 		  stats_ptr->tx_txbf_vht[0],
@@ -563,12 +576,14 @@ htt_t2h_stats_txbf_info_buf_stats_print(
 		  stats_ptr->tx_txbf_cck[4],
 		  stats_ptr->tx_txbf_cck[5],
 		  stats_ptr->tx_txbf_cck[6]);
+#endif
 }
 
 static void
 htt_t2h_stats_txbf_snd_buf_stats_print(
 	struct wlan_dbg_txbf_snd_stats *stats_ptr)
 {
+#ifdef WLAN_DEBUG
 	qdf_nofl_info("TXBF snd Buffer Statistics:");
 	qdf_nofl_info("cbf_20: %u, %u, %u, %u",
 		  stats_ptr->cbf_20[0],
@@ -595,12 +610,14 @@ htt_t2h_stats_txbf_snd_buf_stats_print(
 		  stats_ptr->sounding[6],
 		  stats_ptr->sounding[7],
 		  stats_ptr->sounding[8]);
+#endif
 }
 
 static void
 htt_t2h_stats_tx_selfgen_buf_stats_print(
 	struct wlan_dbg_tx_selfgen_stats *stats_ptr)
 {
+#ifdef WLAN_DEBUG
 	qdf_nofl_info("Tx selfgen Buffer Statistics:");
 	qdf_nofl_info("  %u su_ndpa",
 			stats_ptr->su_ndpa);
@@ -630,12 +647,14 @@ htt_t2h_stats_tx_selfgen_buf_stats_print(
 			stats_ptr->mu_brp1_err);
 	qdf_nofl_info("  %u mu_brp2_err",
 			stats_ptr->mu_brp2_err);
+#endif
 }
 
 static void
 htt_t2h_stats_wifi2_error_stats_print(
 	struct wlan_dbg_wifi2_error_stats *stats_ptr)
 {
+#ifdef WLAN_DEBUG
 	int i;
 
 	qdf_nofl_info("Scheduler error Statistics:");
@@ -672,12 +691,14 @@ htt_t2h_stats_wifi2_error_stats_print(
 	qdf_nofl_info("\n");
 	qdf_nofl_info("  %u rx_rate_inval",
 			stats_ptr->rx_rate_inval);
+#endif
 }
 
 static void
 htt_t2h_rx_musu_ndpa_pkts_stats_print(
 	struct rx_txbf_musu_ndpa_pkts_stats *stats_ptr)
 {
+#ifdef WLAN_DEBUG
 	qdf_nofl_info("Rx TXBF MU/SU Packets and NDPA Statistics:");
 	qdf_nofl_info("  %u Number of TXBF MU packets received",
 			stats_ptr->number_mu_pkts);
@@ -689,6 +710,7 @@ htt_t2h_rx_musu_ndpa_pkts_stats_print(
 			stats_ptr->txbf_ndpa_retry_count);
 	qdf_nofl_info("  %u Total number of TXBF NDPA",
 			stats_ptr->txbf_total_ndpa_count);
+#endif
 }
 
 #define HTT_TICK_TO_USEC(ticks, microsec_per_tick) (ticks * microsec_per_tick)
