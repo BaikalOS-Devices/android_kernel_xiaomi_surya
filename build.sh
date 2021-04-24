@@ -4,7 +4,7 @@
 # Copyright (C) 2020-2021 Adithya R.
 
 SECONDS=0 # builtin bash timer
-ZIPNAME="QuicksilveR-surya-$(date '+%Y%m%d-%H%M').zip"
+ZIPNAME="A_poco_x3_ kernel-$(date '+%Y%m%d-%H%M').zip"
 TC_DIR="$HOME/tc/proton-clang"
 DEFCONFIG="vendor/surya-perf_defconfig"
 
@@ -33,17 +33,17 @@ make -j$(nproc --all) O=out ARCH=arm64 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm 
 
 if [ -f "out/arch/arm64/boot/Image.gz-dtb" ] && [ -f "out/arch/arm64/boot/dtbo.img" ]; then
 echo -e "\nKernel compiled succesfully! Zipping up...\n"
-if ! git clone -q https://github.com/ghostrider-reborn/AnyKernel3 -b surya; then
+if ! git clone -q https://github.com/iamlazy123/AnyKernel -b surya; then
 echo -e "\nCloning AnyKernel3 repo failed! Aborting..."
 exit 1
 fi
-cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3
-cp out/arch/arm64/boot/dtbo.img AnyKernel3
+cp out/arch/arm64/boot/Image.gz-dtb AnyKernel
+cp out/arch/arm64/boot/dtbo.img AnyKernel
 rm -f *zip
-cd AnyKernel3
+cd AnyKernel
 zip -r9 "../$ZIPNAME" * -x '*.git*' README.md *placeholder
 cd ..
-rm -rf AnyKernel3
+rm -rf AnyKernel
 echo -e "\nCompleted in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s) !"
 if command -v gdrive &> /dev/null; then
 gdrive upload --share $ZIPNAME
