@@ -8638,8 +8638,6 @@ static int tavil_set_interpolator_rate(struct snd_soc_dai *dai,
 	if (ret)
 		return ret;
 	ret = tavil_set_mix_interpolator_rate(dai, (u8)rate_val, sample_rate);
-	if (ret)
-		return ret;
 
 	return ret;
 }
