@@ -60,8 +60,8 @@
 #define PATCH_LEVEL 10
 #define FAIL -1
 
-#define WAKELOCK_HOLD_TIME 2000 /* in ms */
-#define FP_UNLOCK_REJECTION_TIMEOUT (WAKELOCK_HOLD_TIME - 500)
+#define WAKELOCK_HOLD_TIME 2500 /* in ms */
+#define FP_UNLOCK_REJECTION_TIMEOUT (WAKELOCK_HOLD_TIME - 50)
 #define GF_SPIDEV_NAME     "goodix,fingerprint"
 /*device name after register in character*/
 #define GF_DEV_NAME            "goodix_fp"
@@ -535,7 +535,7 @@ static long gf_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 }
 #endif /*CONFIG_COMPAT*/
 
- static void notification_work(struct work_struct *work)
+static void notification_work(struct work_struct *work)
 {
 	pr_debug("%s unblank\n", __func__);
 	//dsi_bridge_interface_enable(FP_UNLOCK_REJECTION_TIMEOUT);

@@ -704,7 +704,7 @@ void exit_oom_victim(void)
 void oom_killer_enable(void)
 {
 	oom_killer_disabled = false;
-	pr_info("OOM killer enabled.\n");
+	pr_debug("OOM killer enabled.\n");
 }
 
 /**
@@ -741,7 +741,7 @@ bool oom_killer_disable(signed long timeout)
 		oom_killer_enable();
 		return false;
 	}
-	pr_info("OOM killer disabled.\n");
+	pr_debug("OOM killer disabled.\n");
 
 	return true;
 }
@@ -1122,7 +1122,7 @@ void dump_killed_info(struct task_struct *selected)
 {
 	int selected_tasksize = get_mm_rss(selected->mm);
 
-	pr_info_ratelimited("Killing '%s' (%d), adj %hd,\n"
+	pr_info("Killing '%s' (%d), adj %hd,\n"
 			"   to free %ldkB on behalf of '%s' (%d)\n"
 			"   Free CMA is %ldkB\n"
 			"   Total reserve is %ldkB\n"

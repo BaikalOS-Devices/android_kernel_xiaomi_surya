@@ -1862,12 +1862,13 @@ static int screen_state_for_thermal_callback(struct notifier_block *nb, unsigned
 	blank = *(int *)(evdata->data);
 	switch (blank) {
 	case MSM_DRM_BLANK_POWERDOWN:
+	case DRM_BLANK_LP1:
+	case DRM_BLANK_LP2:
+	case DRM_BLANK_POWERDOWN:
 		sm.screen_state = 0;
-		pr_warn("%s: DRM_BLANK_POWERDOWN\n", __func__);
 		break;
 	case MSM_DRM_BLANK_UNBLANK:
 		sm.screen_state = 1;
-		pr_warn("%s: DRM_BLANK_UNBLANK\n", __func__);
 		break;
 	default:
 		break;
