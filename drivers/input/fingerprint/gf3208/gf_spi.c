@@ -60,8 +60,8 @@
 #define PATCH_LEVEL 10
 #define FAIL -1
 
-#define WAKELOCK_HOLD_TIME 2000 /* in ms */
-#define FP_UNLOCK_REJECTION_TIMEOUT (WAKELOCK_HOLD_TIME - 500)
+#define WAKELOCK_HOLD_TIME 2500 /* in ms */
+#define FP_UNLOCK_REJECTION_TIMEOUT (WAKELOCK_HOLD_TIME - 50)
 #define GF_SPIDEV_NAME     "goodix,fingerprint"
 /*device name after register in character*/
 #define GF_DEV_NAME            "goodix_fp"
@@ -374,7 +374,7 @@ static int irq_setup(struct gf_dev *gf_dev)
 
 	gf_dev->irq = gf_irq_num(gf_dev);
 	status = request_threaded_irq(gf_dev->irq, NULL, gf_irq,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_PERF_CRITICAL,
 			"gf", gf_dev);
 
 	if (status) {
@@ -422,8 +422,8 @@ static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
 	}
 
 	if (gf_key->key == GF_KEY_HOME) {
-		input_report_key(gf_dev->input, key_input, gf_key->value);
-		input_sync(gf_dev->input);
+		//input_report_key(gf_dev->input, key_input, gf_key->value);
+		//input_sync(gf_dev->input);
 	}
 }
 
@@ -578,7 +578,7 @@ static long gf_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 }
 #endif /*CONFIG_COMPAT*/
 
- static void notification_work(struct work_struct *work)
+static void notification_work(struct work_struct *work)
 {
 	pr_debug("%s unblank\n", __func__);
 	//dsi_bridge_interface_enable(FP_UNLOCK_REJECTION_TIMEOUT);

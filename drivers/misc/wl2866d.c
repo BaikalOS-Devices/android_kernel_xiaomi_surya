@@ -782,7 +782,7 @@ static int wl2866d_suspend(struct device *dev)
 	struct wl2866d_chip *chip = i2c_get_clientdata(client);
 	int ret = 0;
 
-	pr_err("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	ret = wl2866d_i2c_write(chip, wl2866d_on_config[VOL_DISABLE].reg, wl2866d_on_config[VOL_DISABLE].value);
 	if (ret < 0)
 		pr_err("wl2866d close voltage failed\n");
@@ -798,7 +798,7 @@ static int wl2866d_resume(struct device *dev)
 //#ifdef __XIAOMI_CAMERA__
 	//int ret = 0;
 
-	pr_err("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	wl2866d_enable_power(chip);
 	gpio_direction_output(chip->en_gpio, 0);
 	/*
@@ -811,11 +811,12 @@ static int wl2866d_resume(struct device *dev)
 //#endif
 	return 0;
 }
-#endif
 
 static const struct dev_pm_ops wl2866d_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(wl2866d_suspend, wl2866d_resume)
 };
+
+#endif
 
 static const struct i2c_device_id wl2866d_id_table[] = {
 	{"longcheer,wl2866d", 0},
