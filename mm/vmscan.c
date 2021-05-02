@@ -155,9 +155,15 @@ struct scan_control {
 #endif
 
 /*
- * From 0 .. 100.  Higher means more swappy.
+ * From 0 .. 200.  Higher means more swappy. (adapted from samsung)
  */
-int vm_swappiness = 60;
+#if IS_ENABLED(CONFIG_ZRAM) && IS_ENABLED(CONFIG_INCREASE_MAXIMUM_SWAPPINESS)
+int vm_swappiness = 150;
+#elif IS_ENABLED(CONFIG_ZRAM)
+int vm_swappiness = 100;
+#else
+int vm_swappiness = 100;
+#endif
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.
@@ -3141,7 +3147,11 @@ unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 		.priority = DEF_PRIORITY,
 		.may_writepage = !laptop_mode,
 		.may_unmap = 1,
+#ifdef CONFIG_DIRECT_RECLAIM_FILE_PAGES_ONLY
+		.may_swap = 0,
+#else
 		.may_swap = 1,
+#endif
 	};
 
 	/*
