@@ -430,7 +430,7 @@ static void sysstats_fill_zoneinfo(struct sys_memstats *stats)
 	for (zone = node_zones; zone - node_zones < MAX_NR_ZONES; ++zone) {
 		if (!populated_zone(zone))
 			continue;
-
+			
 		zspages += zone_page_state(zone, NR_ZSPAGES);
 		if (!strcmp(zone->name, "DMA")) {
 			stats->dma_nr_free_pages =
