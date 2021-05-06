@@ -1558,6 +1558,7 @@ return:
 static irqreturn_t nvt_ts_work_func(int irq, void *data)
 {
 	struct nvt_ts_data *ts = data;
+    pm_wakeup_event(&ts->input_dev->dev, 1000);
 	queue_work(ts->coord_workqueue, &ts->irq_work);
 	return IRQ_HANDLED;
 }
@@ -2475,7 +2476,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 		ts->irq_enabled = true;
 		ret = request_threaded_irq(client->irq, NULL, nvt_ts_work_func,
 				ts->int_trigger_type |
-				IRQF_ONESHOT | IRQF_NO_SUSPEND |
+				IRQF_ONESHOT | /*IRQF_NO_SUSPEND |*/
 				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts);
 		if (ret != 0) {
 			NVT_ERR("request irq failed. ret=%d\n", ret);
@@ -3001,8 +3002,11 @@ static int32_t nvt_ts_suspend(struct device *dev)
 	uint32_t i = 0;
 #endif
 
+	mutex_lock(&ts->lock);
+
 	if (!bTouchIsAwake) {
-		NVT_LOG("Touch is already suspend\n");
+		//NVT_LOG("Touch is already suspend\n");
+    	mutex_unlock(&ts->lock);
 		return 0;
 	}
 
@@ -3027,9 +3031,7 @@ static int32_t nvt_ts_suspend(struct device *dev)
 	nvt_esd_check_enable(false);
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
-	mutex_lock(&ts->lock);
-
-	NVT_LOG("start\n");
+	//NVT_LOG("start\n");
 
 	bTouchIsAwake = 0;
 
@@ -3074,7 +3076,7 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	msleep(50);
 
-	NVT_LOG("end\n");
+	//NVT_LOG("end\n");
 
 	return 0;
 }
@@ -3088,29 +3090,40 @@ return:
 *******************************************************/
 static int32_t nvt_ts_resume(struct device *dev)
 {
-	if (bTouchIsAwake) {
+	/*if (bTouchIsAwake) {
 		NVT_LOG("Touch is already resume\n");
 #if NVT_TOUCH_WDT_RECOVERY
 		mutex_lock(&ts->lock);
 		nvt_update_firmware(ts->boot_update_firmware_name);
 		mutex_unlock(&ts->lock);
-#endif /* #if NVT_TOUCH_WDT_RECOVERY */
+#endif // 
 		return 0;
-	}
+	}*/
 
 	mutex_lock(&ts->lock);
 
-	NVT_LOG("start\n");
+	if (bTouchIsAwake) {
+		//NVT_LOG("Touch is already resume\n");
+		//mutex_unlock(&ts->lock);
+		//return 0;
+	}
+
+
+
+	//NVT_LOG("start\n");
 
 	// please make sure display reset(RESX) sequence and mipi dsi cmds sent before this
 #if NVT_TOUCH_SUPPORT_HW_RST
 	gpio_set_value(ts->reset_gpio, 1);
 #endif
-	if (nvt_update_firmware(ts->boot_update_firmware_name)) {
-		NVT_ERR("download firmware failed, ignore check fw state\n");
-	} else {
-		nvt_check_fw_reset_state(RESET_STATE_REK);
-	}
+    
+	if (!bTouchIsAwake) {
+    	if (nvt_update_firmware(ts->boot_update_firmware_name)) {
+	    	NVT_ERR("download firmware failed, ignore check fw state\n");
+    	} else {
+    		nvt_check_fw_reset_state(RESET_STATE_REK);
+    	}
+    }
 
 #if WAKEUP_GESTURE
 	if (!ts->is_gesture_mode) {
@@ -3134,7 +3147,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
 	bTouchIsAwake = 1;
-	NVT_LOG("bTouchIsAwake = 1\n");
+	//NVT_LOG("bTouchIsAwake = 1\n");
 	mutex_unlock(&ts->lock);
 
 #if LCT_TP_PALM_EN
@@ -3162,7 +3175,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 		g_touchscreen_usb_pulgin.event_callback();
 #endif
 
-	NVT_LOG("end\n");
+	//NVT_LOG("end\n");
 
 #if LCT_TP_PALM_EN
 	msleep(100);
@@ -3185,15 +3198,17 @@ int lct_nvt_tp_gesture_callback(bool flag)
 	}
 	if (flag) {
 		ts->is_gesture_mode = true;
-		if (nvt_ts_enable_regulator(true) < 0)
+		if (nvt_ts_enable_regulator(true) < 0) 
 			NVT_ERR("Failed to enable regulator\n");
-			set_lcd_reset_gpio_keep_high(true);
+		set_lcd_reset_gpio_keep_high(true);
+        
 		NVT_LOG("enable gesture mode\n");
 	} else {
 		ts->is_gesture_mode = false;
-		if (nvt_ts_enable_regulator(false) < 0)
+		if (nvt_ts_enable_regulator(false) < 0) 
 			NVT_ERR("Failed to disable regulator\n");
-			set_lcd_reset_gpio_keep_high(false);
+		set_lcd_reset_gpio_keep_high(false);
+        
 		NVT_LOG("disable gesture mode\n");
 	}
 	return 0;
@@ -3213,20 +3228,22 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 	struct nvt_ts_data *ts =
 		container_of(self, struct nvt_ts_data, drm_notif);
 
-	if (!evdata || (evdata->id != 0))
+	if (!evdata /*|| (evdata->id != 0)*/)
 		return 0;
 
 	if (evdata->data && ts) {
 		blank = evdata->data;
 		if (event == DRM_EARLY_EVENT_BLANK) {
 			if (*blank == DRM_BLANK_POWERDOWN) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+				NVT_ERR("event=%lu, *blank=%d\n", event, *blank);
 				cancel_work_sync(&ts->resume_work);
 				nvt_ts_suspend(&ts->client->dev);
 			}
 		} else if (event == DRM_EVENT_BLANK) {
-			if (*blank == DRM_BLANK_UNBLANK) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+			if (*blank == DRM_BLANK_UNBLANK 
+                || *blank == DRM_BLANK_LP1
+                || *blank == DRM_BLANK_LP2 ) {
+				NVT_ERR("event=%lu, *blank=%d\n", event, *blank);
 				//nvt_ts_resume(&ts->client->dev);
 				queue_work(ts->workqueue, &ts->resume_work);
 			}
@@ -3293,7 +3310,7 @@ static int nvt_pm_suspend(struct device *dev)
 
 	ts->dev_pm_suspend = true;
 	reinit_completion(&ts->dev_pm_suspend_completion);
-	NVT_LOG("pm suspend");
+	//NVT_LOG("pm suspend");
 
 	return 0;
 }
@@ -3304,7 +3321,7 @@ static int nvt_pm_resume(struct device *dev)
 
 	ts->dev_pm_suspend = false;
 	complete(&ts->dev_pm_suspend_completion);
-	NVT_LOG("pm resume");
+	//NVT_LOG("pm resume");
 
 	return 0;
 }

@@ -71,7 +71,7 @@
 #if NVT_DEBUG
 #define NVT_LOG(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
 #else
-#define NVT_LOG(fmt, args...)    pr_debug("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
+#define NVT_LOG(fmt, args...)    pr_info("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
 #endif
 #define NVT_ERR(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_SPI_NAME, __func__, __LINE__, ##args)
 
@@ -101,7 +101,7 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 #if WAKEUP_GESTURE
 extern const uint16_t gesture_key_array[];
 #endif
-#define LCT_TP_PALM_EN		1
+#define LCT_TP_PALM_EN		0
 #define BOOT_UPDATE_FIRMWARE 1
 #define FIRMWARE_NAME_LEN    256
 #define BOOT_UPDATE_FIRMWARE_NAME         "novatek_ts_fw.bin"
@@ -114,17 +114,17 @@ extern const uint16_t gesture_key_array[];
 //---ESD Protect.---
 #define NVT_TOUCH_ESD_PROTECT 0
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
-#define NVT_TOUCH_WDT_RECOVERY 1
+#define NVT_TOUCH_WDT_RECOVERY 0
 #define NVT_TOUCH_ESD_DISP_RECOVERY 1
 
 //enable 'check touch vendor' feature
 #define CHECK_TOUCH_VENDOR
 
 //enable tp work feature
-#define LCT_TP_WORK_EN      1
+#define LCT_TP_WORK_EN      0
 
 //enable tp grip area feature
-#define LCT_TP_GRIP_AREA_EN		1
+#define LCT_TP_GRIP_AREA_EN		0
 
 /*2019.12.06 longcheer taocheng add for charger mode begin*/
 /*functions description*/
