@@ -53,6 +53,13 @@ static unsigned long get_target_state(struct thermal_instance *instance,
 	unsigned long cur_state;
 	unsigned long next_target;
 
+    /*
+	 * If the throttle condition is not reached and there is no
+	 * previous mitigaiton request, then there is nothing to compute.
+	 */
+	if (!throttle && instance->target == THERMAL_NO_TARGET)
+		return THERMAL_NO_TARGET;
+
 	/*
 	 * If the throttle condition is not reached and there is no
 	 * previous mitigaiton request, then there is nothing to compute.
