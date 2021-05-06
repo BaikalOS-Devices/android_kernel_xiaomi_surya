@@ -2365,15 +2365,15 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 
 	walt_update_min_max_capacity();
 
-	max_possible_freq = max(max_possible_freq, policy->cpuinfo.max_freq);
+	max_possible_freq = max(max_possible_freq, policy->max);
 	if (min_max_freq == 1)
 		min_max_freq = UINT_MAX;
-	min_max_freq = min(min_max_freq, policy->cpuinfo.max_freq);
+	min_max_freq = min(min_max_freq, policy->max);
 	BUG_ON(!min_max_freq);
 	BUG_ON(!policy->max);
 
 	for_each_cpu(i, &policy_cluster)
-		cpu_max_table_freq[i] = policy->cpuinfo.max_freq;
+		cpu_max_table_freq[i] = policy->max;
 
 	for_each_cpu(i, &policy_cluster) {
 		cluster = cpu_rq(i)->cluster;
@@ -2390,7 +2390,7 @@ static int cpufreq_notifier_policy(struct notifier_block *nb,
 			for_each_cpu(j, &cluster->cpus)
 				cpumask_copy(&cpu_rq(j)->freq_domain_cpumask,
 						policy->related_cpus);
-			cluster->max_possible_freq = policy->cpuinfo.max_freq;
+			cluster->max_possible_freq = policy->max;
 			cluster->max_possible_capacity =
 				compute_max_possible_capacity(cluster);
 			cluster->freq_init_done = true;
