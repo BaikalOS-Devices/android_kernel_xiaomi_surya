@@ -1805,6 +1805,7 @@ static int do_execveat_common(int fd, struct filename *filename,
 	if (retval < 0)
 		goto out;
 
+    /*
 	if (is_global_init(current->parent)) {
 		if (unlikely(!strncmp(filename->name,
 					   HWCOMPOSER_BIN_PREFIX,
@@ -1813,6 +1814,7 @@ static int do_execveat_common(int fd, struct filename *filename,
 			set_cpus_allowed_ptr(current, cpu_perf_mask);
 		}
 	}
+    */
 
 	/* execve succeeded */
 	current->fs->in_exec = 0;
