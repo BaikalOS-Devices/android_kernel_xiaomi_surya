@@ -3205,7 +3205,7 @@ static void ufshcd_init_hibern8_on_idle(struct ufs_hba *hba)
 			  ufshcd_hibern8_exit_work);
 	}
 
-	hba->hibern8_on_idle.is_enabled = true;
+    hba->hibern8_on_idle.is_enabled = true;
 
 	hba->hibern8_on_idle.delay_attr.show =
 					ufshcd_hibern8_on_idle_delay_show;
@@ -3408,7 +3408,7 @@ static inline void ufshcd_hba_capabilities(struct ufs_hba *hba)
 	((hba->capabilities & MASK_TASK_MANAGEMENT_REQUEST_SLOTS) >> 16) + 1;
 
 	/* disable auto hibern8 */
-	hba->capabilities &= ~MASK_AUTO_HIBERN8_SUPPORT;
+	//hba->capabilities &= ~MASK_AUTO_HIBERN8_SUPPORT;
 }
 
 /**
@@ -11025,7 +11025,7 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	};
 	int ret;
 
-	pm_qos_add_request(&req, PM_QOS_CPU_DMA_LATENCY, 100);
+	pm_qos_add_request(&req, PM_QOS_CPU_DMA_LATENCY, 150);
 	ret = __ufshcd_resume(hba, pm_op);
 	pm_qos_remove_request(&req);
 
@@ -12544,6 +12544,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 		hba->is_irq_enabled = true;
 	}
 
+    irq_set_affinity(irq, cpumask_of(1));
 	err = scsi_add_host(host, hba->dev);
 	if (err) {
 		dev_err(hba->dev, "scsi_add_host failed\n");

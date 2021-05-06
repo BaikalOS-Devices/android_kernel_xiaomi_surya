@@ -499,15 +499,15 @@ void ufstw_ee_handler(struct ufsf_feature *ufsf)
 
 static inline void ufstw_init_dev_jobs(struct ufsf_feature *ufsf)
 {
-	INIT_INFO("INIT_WORK(tw_reset_work)");
+	//INIT_INFO("INIT_WORK(tw_reset_work)");
 	INIT_DELAYED_WORK(&ufsf->tw_reset_work, ufstw_reset_work_fn);
 }
 
 static inline void ufstw_init_lu_jobs(struct ufstw_lu *tw)
 {
-	INIT_INFO("INIT_DELAYED_WORK(tw_flush_work) ufstw_lu%d", tw->lun);
+	//INIT_INFO("INIT_DELAYED_WORK(tw_flush_work) ufstw_lu%d", tw->lun);
 	INIT_DELAYED_WORK(&tw->tw_flush_work, ufstw_flush_work_fn);
-	INIT_INFO("INIT_WORK(tw_lifetime_work)");
+	//INIT_INFO("INIT_WORK(tw_lifetime_work)");
 	INIT_WORK(&tw->tw_lifetime_work, ufstw_lifetime_work_fn);
 }
 
@@ -515,11 +515,11 @@ static inline void ufstw_cancel_lu_jobs(struct ufstw_lu *tw)
 {
 	int ret;
 	ret = cancel_delayed_work_sync(&tw->tw_flush_work);
-	INIT_INFO("cancel_delayed_work_sync(tw_flush_work) ufstw_lu%d = %d",
-		  tw->lun, ret);
+	//INIT_INFO("cancel_delayed_work_sync(tw_flush_work) ufstw_lu%d = %d",
+	//	  tw->lun, ret);
 	ret = cancel_work_sync(&tw->tw_lifetime_work);
-	INIT_INFO("cancel_work_sync(tw_lifetime_work) ufstw_lu%d = %d",
-		  tw->lun, ret);
+	//INIT_INFO("cancel_work_sync(tw_lifetime_work) ufstw_lu%d = %d",
+	//	  tw->lun, ret);
 }
 
 static inline int ufstw_version_check(struct ufstw_dev_info *tw_dev_info)
@@ -803,7 +803,7 @@ void ufstw_suspend(struct ufsf_feature *ufsf)
 		if (!tw)
 			continue;
 		ufstw_lu_get(tw);
-		INFO_MSG("ufstw_lu%d goto suspend", lun);
+		//INFO_MSG("ufstw_lu%d goto suspend", lun);
 		ufstw_cancel_lu_jobs(tw);
 		ufstw_lu_put(tw);
 	}
