@@ -4,7 +4,7 @@
 # Copyright (C) 2020-2021 Adithya R.
 
 SECONDS=0 # builtin bash timer
-ZIPNAME="A_poco_x3_ kernel-$(date '+%Y%m%d-%H%M').zip"
+ZIPNAME="LILAC_kernel-$(date '+%Y%m%d-%H%M').zip"
 TC_DIR="$HOME/tc/proton-clang"
 DEFCONFIG="vendor/surya-perf_defconfig"
 
@@ -18,8 +18,8 @@ exit 1
 fi
 fi
 
-export KBUILD_BUILD_USER=adithya
-export KBUILD_BUILD_HOST=ghostrider_reborn
+export KBUILD_BUILD_USER=lalice
+export KBUILD_BUILD_HOST=21
 
 if [[ $1 = "-c" || $1 = "--clean" ]]; then
 rm -rf out
