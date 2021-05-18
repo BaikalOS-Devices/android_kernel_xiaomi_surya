@@ -548,6 +548,8 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	count = mode->priv_info->cmd_sets[type].count;
 	state = mode->priv_info->cmd_sets[type].state;
 
+    pr_info("[%s] tx_cmd  %d\n",
+			 panel->name, type);
 	if (count == 0) {
 		pr_debug("[%s] No commands to be sent for state(%d)\n",
 			 panel->name, type);
@@ -2205,14 +2207,14 @@ static int dsi_panel_parse_misc_features(struct dsi_panel *panel)
 {
 	struct dsi_parser_utils *utils = &panel->utils;
 
-	panel->ulps_feature_enabled =
-		utils->read_bool(utils->data, "qcom,ulps-enabled");
+	panel->ulps_feature_enabled = true;
+		//utils->read_bool(utils->data, "qcom,ulps-enabled");
 
 	pr_info("%s: ulps feature %s\n", __func__,
 		(panel->ulps_feature_enabled ? "enabled" : "disabled"));
 
-	panel->ulps_suspend_enabled =
-		utils->read_bool(utils->data, "qcom,suspend-ulps-enabled");
+	panel->ulps_suspend_enabled = true;
+		//utils->read_bool(utils->data, "qcom,suspend-ulps-enabled");
 
 	pr_info("%s: ulps during suspend feature %s", __func__,
 		(panel->ulps_suspend_enabled ? "enabled" : "disabled"));
@@ -4626,6 +4628,7 @@ static int panel_disp_param_send_lock(struct dsi_panel *panel, int param)
 		break;
 	}
 
+    
 	temp = param & 0x00000F00;
 	switch (temp) {
 	case 0x100:
@@ -4686,11 +4689,12 @@ static int panel_disp_param_send_lock(struct dsi_panel *panel, int param)
 		break;
 	}
 
+
 	temp = param & 0x000F0000;
 	switch (temp) {
 	case 0x10000:
 		pr_info("hbm on\n");
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_ON);
+		//rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_ON);
 		break;
 	case 0xA0000:
 		pr_info("lcd hbm off\n");
@@ -4698,11 +4702,11 @@ static int panel_disp_param_send_lock(struct dsi_panel *panel, int param)
 		break;
 	case 0xB0000:
 		pr_info("lcd hbm l1 mode\n");
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM1_ON);
+		//rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM1_ON);
 		break;
 	case 0xC0000:
 		pr_info("lcd hbm l2 mode\n");
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM2_ON);
+		//rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM2_ON);
 		break;
 	case 0xF0000:
 		pr_info("hbm off\n");
