@@ -535,6 +535,8 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	count = mode->priv_info->cmd_sets[type].count;
 	state = mode->priv_info->cmd_sets[type].state;
 
+    pr_info("[%s] tx_cmd  %d\n",
+			 panel->name, type);
 	if (count == 0) {
 		pr_debug("[%s] No commands to be sent for state(%d)\n",
 			 panel->name, type);
@@ -2075,8 +2077,7 @@ static int dsi_panel_parse_misc_features(struct dsi_panel *panel)
 	pr_info("%s: ulps feature %s\n", __func__,
 		(panel->ulps_feature_enabled ? "enabled" : "disabled"));
 
-	panel->ulps_suspend_enabled =
-		utils->read_bool(utils->data, "qcom,suspend-ulps-enabled");
+	panel->ulps_suspend_enabled = true;
 
 	pr_info("%s: ulps during suspend feature %s", __func__,
 		(panel->ulps_suspend_enabled ? "enabled" : "disabled"));
