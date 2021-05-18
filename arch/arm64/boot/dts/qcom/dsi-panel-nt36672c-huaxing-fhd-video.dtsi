@@ -21,7 +21,7 @@
 		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
 		qcom,mdss-dsi-underflow-color = <0xff>;
 		qcom,mdss-dsi-border-color = <0>;
-		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-traffic-mode = "burst_mode";
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;
 		qcom,mdss-dsi-lp11-init;
@@ -38,6 +38,8 @@
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-tx-eot-append;
 		qcom,dispparam-enabled;
+		qcom,ulps-enabled;
+		qcom,suspend-ulps-enabled;
 		qcom,mdss-dsi-panel-hdr-enabled;
 		qcom,mdss-dsi-panel-hdr-color-primaries = <14500 15500 32000
 			17000 15500 30000 8000 3000>;
@@ -101,6 +103,7 @@
 					15 01 00 00 00 00 02 53 2C
 					15 01 00 00 00 00 02 55 00
 
+                    
 					//give by nova, use for cabc begin
 					//1080*2400
 					15 01 00 00 00 00 02 FF 23
@@ -166,6 +169,7 @@
 					15 01 00 00 00 00 02 67 B1
 					15 01 00 00 00 00 02 A0 11
 					//give by nova, use for cabc end
+                    
 
 					//give by nova, use for esd check begin
 					15 01 00 00 00 00 02 FF 27
@@ -192,6 +196,7 @@
 					05 01 00 00 3C 00 02 10 00
 				];
 
+                
 				qcom,mdss-dsi-dispparam-cabcuion-command = [
 					15 01 00 00 00 00 02 FF 10
 					15 01 00 00 00 00 02 FB 01
@@ -216,6 +221,9 @@
 					15 01 00 00 00 00 02 53 2C
 					15 01 00 00 14 00 02 55 00
 				];
+                
+                
+                
 				qcom,mdss-dsi-dispparam-lcd-hbm-l1-on-command = [
 					15 01 00 00 00 00 02 FF 10
 					15 01 00 00 00 00 02 FB 01
@@ -246,10 +254,12 @@
 				qcom,mdss-dsi-hbm2-on-command = [
 					15 01 00 00 00 00 02 51 FF
 				];
+                
 
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
 
+                
 				qcom,mdss-dsi-dispparam-cabcuion-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-dispparam-cabcstillon-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-dispparam-cabcmovieon-command-state = "dsi_lp_mode";
@@ -263,9 +273,7 @@
 				qcom,mdss-dsi-hbm1-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-hbm2-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-dispparam-hbm-off-command-state = "dsi_lp_mode";
-
-
-
+                
 
 				//delay dimming on
 				qcom,mdss-dsi-dispparam-dimmingon-command = [15 01 00 00 01 00 02 53 2C];
