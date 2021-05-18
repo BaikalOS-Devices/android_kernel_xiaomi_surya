@@ -49,6 +49,19 @@ struct task_struct *kthread_create_on_cpu(int (*threadfn)(void *data),
 	__k;								   \
 })
 
+#define kthread_run_bind(perfmask, threadfn, data, namefmt, ...)			   \
+({									   \
+	struct task_struct *__k						   \
+		= kthread_create(threadfn, data, namefmt, ## __VA_ARGS__); \
+	if (!IS_ERR(__k))						   \
+		BUILD_BUG_ON((perfmask != cpu_lp_mask) &&		   \
+			     (perfmask != cpu_perf_mask) &&		   \
+			     (perfmask != cpu_perf_first_mask) &&          \
+			     (perfmask != cpu_perf_second_mask));          \
+		kthread_bind_mask(__k, perfmask);			   \
+		wake_up_process(__k);					   \
+	__k;								   \
+})
 /**
  * kthread_run_perf_critical - create and wake a performance-critical thread.
  *
