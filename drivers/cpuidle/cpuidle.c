@@ -101,6 +101,8 @@ static int find_deepest_state(struct cpuidle_driver *drv,
 	unsigned int latency_req = 0;
 	int i, ret = 0;
 
+
+
 	for (i = 1; i < drv->state_count; i++) {
 		struct cpuidle_state *s = &drv->states[i];
 		struct cpuidle_state_usage *su = &dev->states_usage[i];
@@ -114,6 +116,18 @@ static int find_deepest_state(struct cpuidle_driver *drv,
 		latency_req = s->exit_latency;
 		ret = i;
 	}
+
+    if( i == 0 ) {
+        pr_err("not idle: scount=%d latreq=%d maxlat=%u forb=%X s2idle=%d\n",
+        drv->state_count,latency_req,max_latency,forbidden_flags,s2idle);
+    }
+
+
+    if( dev->use_deepest_state )  {
+        if( drv->state_count < 1 ) return 0;
+        else return drv->state_count-1;
+    }
+
 	return ret;
 }
 
@@ -127,6 +141,8 @@ static int find_deepest_state(struct cpuidle_driver *drv,
 void cpuidle_use_deepest_state(bool enable)
 {
 	struct cpuidle_device *dev;
+
+    pr_err("use deepest state=%d\n", enable);
 
 	preempt_disable();
 	dev = cpuidle_get_device();
@@ -671,8 +687,8 @@ static int cpuidle_latency_notify(struct notifier_block *b,
 
 	/* Use READ_ONCE to get the isolated mask outside cpu_add_remove_lock */
 	cpus &= ~READ_ONCE(*cpumask_bits(cpu_isolated_mask));
-	if (cpus)
-		arch_send_wakeup_ipi_mask(to_cpumask(&cpus));
+	//if (cpus)
+	//	arch_send_wakeup_ipi_mask(to_cpumask(&cpus));
 
 	return NOTIFY_OK;
 }
