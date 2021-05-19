@@ -1,5 +1,5 @@
 /* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -63,16 +63,19 @@
 			capacity-dmips-mhz = <487>;
  			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 
 				L3_0: l3-cache {
 				      compatible = "arm,arch-cache";
+				      cache-size = <0x100000>;
 				      cache-level = <3>;
 				};
 			};
@@ -100,11 +103,13 @@
 			capacity-dmips-mhz = <487>;
 			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			cache-size = <0x8000>;
 			next-level-cache = <&L2_100>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_100: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
@@ -133,11 +138,13 @@
 			capacity-dmips-mhz = <487>;
 			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			cache-size = <0x8000>;
 			next-level-cache = <&L2_200>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_200: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
@@ -165,11 +172,13 @@
 			capacity-dmips-mhz = <487>;
 			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			cache-size = <0x8000>;
 			next-level-cache = <&L2_300>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_300: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
@@ -197,11 +206,13 @@
 			capacity-dmips-mhz = <487>;
 			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			cache-size = <0x8000>;
 			next-level-cache = <&L2_400>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_400: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
@@ -229,11 +240,13 @@
 			capacity-dmips-mhz = <487>;
 			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>;
+			cache-size = <0x8000>;
 			next-level-cache = <&L2_500>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_500: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
@@ -261,11 +274,13 @@
 			capacity-dmips-mhz = <1024>;
 			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
+			cache-size = <0x10000>;
 			next-level-cache = <&L2_600>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			L2_600: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x40000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			      qcom,dump-size = <0x48000>;
@@ -302,11 +317,13 @@
 			capacity-dmips-mhz = <1024>;
 			freq-energy-model;
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>;
+			cache-size = <0x10000>;
 			next-level-cache = <&L2_700>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			L2_700: l2-cache {
 			      compatible = "arm,arch-cache";
+			      cache-size = <0x40000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			      qcom,dump-size = <0x48000>;
@@ -639,13 +656,24 @@
 		};
 
 		cont_splash_memory: cont_splash_region@9c000000 {
-			reg = <0x0 0x9c000000 0x0 0x01700000>;
+			reg = <0x0 0x9c000000 0x0 0x01800000>;
 			label = "cont_splash_region";
 		};
 
-		dfps_data_memory: dfps_data_region@9d700000 {
+		disp_rdump_memory: disp_rdump_region@9c000000 {
+			reg = <0x0 0x9c000000 0x0 0x01800000>;
+			label = "disp_rdump_region";
+		};
+
+		dfps_data_memory: dfps_data_region@9e300000 {
 			reg = <0x0 0x9d700000 0x0 0x0100000>;
 			label = "dfps_data_region";
+		};
+
+		dump_mem: mem_dump_region {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0 0x2400000>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -1414,6 +1442,61 @@
 		};
 	};
 
+	mem_dump {
+		compatible = "qcom,mem-dump";
+		memory-region = <&dump_mem>;
+
+		rpmh {
+			qcom,dump-size = <0x2000000>;
+			qcom,dump-id = <0xec>;
+		};
+
+		rpm_sw {
+			qcom,dump-size = <0x28000>;
+			qcom,dump-id = <0xea>;
+		};
+
+		pmic {
+			qcom,dump-size = <0x10000>;
+			qcom,dump-id = <0xe4>;
+		};
+
+		fcm {
+			qcom,dump-size = <0x8400>;
+			qcom,dump-id = <0xee>;
+		};
+
+		tmc_etf {
+			qcom,dump-size = <0x10000>;
+			qcom,dump-id = <0xf0>;
+		};
+
+		etf_swao {
+			qcom,dump-size = <0x8400>;
+			qcom,dump-id = <0xf1>;
+		};
+
+		etr_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x100>;
+		};
+
+		etf_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x101>;
+		};
+
+		etfswao_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x102>;
+		};
+
+		misc_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe8>;
+		};
+	};
+
 	thermal_zones: thermal-zones {};
 
 	tsens0: tsens@c222000 {
@@ -1424,7 +1507,6 @@
 			    "tsens_tm_physical";
 		interrupts = <0 506 0>, <0 508 0>;
 		interrupt-names = "tsens-upper-lower", "tsens-critical";
-		tsens-reinit-wa;
 		#thermal-sensor-cells = <1>;
 	};
 
@@ -1436,7 +1518,6 @@
 			    "tsens_tm_physical";
 		interrupts = <0 507 0>, <0 509 0>;
 		interrupt-names = "tsens-upper-lower", "tsens-critical";
-		tsens-reinit-wa;
 		#thermal-sensor-cells = <1>;
 	};
 
@@ -1568,7 +1649,6 @@
 		qcom,adsp-remoteheap-vmid = <22 37>;
 		qcom,fastrpc-adsp-audio-pdr;
 		qcom,fastrpc-adsp-sensors-pdr;
-		qcom,qos-cores = <0 1 2 3 4 5>;
 
 		qcom,msm_fastrpc_compute_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
@@ -2588,13 +2668,6 @@
 		qcom,aux-minidump-ids = <4>;
 		qcom,complete-ramdump;
 
-		qcom,msm-bus,name = "pil-modem";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-			<129 512 0 0>,
-			<129 512 0 7000000>;
-
 		/* Inputs from mss */
 		interrupts-extended = <&pdc GIC_SPI 266 IRQ_TYPE_EDGE_RISING>,
 				      <&modem_smp2p_in 0 IRQ_TYPE_NONE>,
@@ -3225,7 +3298,7 @@
 	clocks = <&clock_gpucc GPU_CC_GX_GFX3D_CLK_SRC>;
 	qcom,force-enable-root-clk;
 	parent-supply = <&VDD_GFX_LEVEL>;
-        qcom,skip-disable-before-sw-enable;
+	qcom,skip-disable-before-sw-enable;
 	qcom,reset-aon-logic;
 	status = "ok";
 };
