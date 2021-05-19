@@ -6849,7 +6849,11 @@ schedtune_cpu_margin(unsigned long util, int cpu)
 static inline long
 schedtune_task_margin(struct task_struct *task)
 {
+#ifdef CONFIG_SCHED_TUNE
 	int boost = schedtune_task_boost(task);
+#elif  CONFIG_UCLAMP_TASK
+	int boost = uclamp_boosted(task);
+#endif
 	unsigned long util;
 	long margin;
 
@@ -7644,7 +7648,11 @@ static int get_start_cpu(struct task_struct *p)
 {
 	struct root_domain *rd = cpu_rq(smp_processor_id())->rd;
 	int start_cpu = rd->min_cap_orig_cpu;
+#ifdef CONFIG_SCHED_TUNE
 	bool boosted = schedtune_task_boost(p) > 0 ||
+#elif  CONFIG_UCLAMP_TASK
+	bool boosted = uclamp_boosted(p) > 0 ||
+#endif
 			task_boost_policy(p) == SCHED_BOOST_ON_BIG;
 	bool task_skip_min = (sched_boost() != CONSERVATIVE_BOOST)
 				&& get_rtg_status(p) && p->unfilter;
@@ -9450,7 +9458,11 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 
 	/* Don't allow boosted tasks to be pulled to small cores */
 	if (env->flags & LBF_IGNORE_STUNE_BOOSTED_TASKS &&
+#ifdef CONFIG_SCHED_TUNE	
 		(schedtune_task_boost(p) > 0))
+#elif  CONFIG_UCLAMP_TASK
+		(uclamp_boosted(p) > 0))
+#endif
 		return 0;
 
 	if (task_running(env->src_rq, p)) {
