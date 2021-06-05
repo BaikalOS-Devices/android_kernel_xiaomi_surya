@@ -21037,6 +21037,7 @@ static inline void hdd_dump_connect_req(struct hdd_adapter *adapter,
 					struct net_device *ndev,
 					struct cfg80211_connect_params *req)
 {
+#ifdef WLAN_DEBUG
 	uint32_t i;
 
 	hdd_nofl_debug("cfg80211_connect req for %s(vdevid-%d): mode %d freq %d SSID %.*s auth type %d WPA ver %d n_akm %d n_cipher %d grp_cipher %x mfp %d freq hint %d",
@@ -21057,7 +21058,6 @@ static inline void hdd_dump_connect_req(struct hdd_adapter *adapter,
 		hdd_nofl_debug("prev BSSID "QDF_MAC_ADDR_FMT,
 				QDF_MAC_ADDR_REF(req->prev_bssid));
 
-#ifdef WLAN_DEBUG
 	for (i = 0; i < req->crypto.n_akm_suites; i++)
 		hdd_nofl_debug("akm[%d] = %x", i, req->crypto.akm_suites[i]);
 

@@ -5519,10 +5519,11 @@ void lim_send_frame(struct mac_context *mac_ctx, uint8_t vdev_id, uint8_t *buf,
 	QDF_STATUS qdf_status;
 	uint8_t *frame;
 	void *packet;
-	tpSirMacFrameCtl fc = (tpSirMacFrameCtl)buf;
 	tpSirMacMgmtHdr mac_hdr = (tpSirMacMgmtHdr)buf;
 
 #ifdef WLAN_DEBUG
+	tpSirMacFrameCtl fc = (tpSirMacFrameCtl)buf;
+
 	pe_debug("sending fc->type: %d fc->subType: %d",
 		 fc->type, fc->subType);
 #endif

@@ -5283,6 +5283,7 @@ QDF_STATUS sme_get_cfg_valid_channels(uint32_t *valid_ch_freq, uint32_t *len)
 	return status;
 }
 
+#ifdef WLAN_DEBUG
 static uint8_t *sme_reg_hint_to_str(const enum country_src src)
 {
 	switch (src) {
@@ -5302,6 +5303,7 @@ static uint8_t *sme_reg_hint_to_str(const enum country_src src)
 		return "unknown";
 	}
 }
+#endif
 
 void sme_set_cc_src(mac_handle_t mac_handle, enum country_src cc_src)
 {

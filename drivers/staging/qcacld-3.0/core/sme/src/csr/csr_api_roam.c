@@ -13633,10 +13633,11 @@ static QDF_STATUS csr_roam_start_wait_for_key_timer(
 QDF_STATUS csr_roam_stop_wait_for_key_timer(struct mac_context *mac)
 {
 	uint8_t vdev_id = mac->roam.WaitForKeyTimerInfo.vdev_id;
+
+#ifdef WLAN_DEBUG
 	tpCsrNeighborRoamControlInfo pNeighborRoamInfo =
 		&mac->roam.neighborRoamInfo[vdev_id];
 
-#ifdef WLAN_DEBUG
 	sme_debug("WaitForKey timer stopped in state: %s sub-state: %s",
 		mac_trace_get_neighbour_roam_state(pNeighborRoamInfo->
 						   neighborRoamState),

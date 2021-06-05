@@ -34,7 +34,9 @@
 
 #include <wlan_defs.h>
 
+#ifdef WLAN_DEBUG
 static char *bw_str_arr[] = {"20MHz", "40MHz", "80MHz", "160MHz"};
+#endif
 
 /*
  * Defined the macro tx_rate_stats_print_cmn()
@@ -492,12 +494,8 @@ htt_t2h_stats_rx_reorder_stats_print(struct rx_reorder_stats *stats_ptr,
 	qdf_nofl_info("  %u  MPDUs with SN in the past & within BA window",
 		      stats_ptr->dup_past_within_window);
 	qdf_nofl_info("  %u  MPDUs with SN in the past & outside BA window",
-<<<<<<< HEAD
 		      stats_ptr->dup_past_outside_window);
-=======
-			stats_ptr->dup_past_outside_window);
 #endif
->>>>>>> 355d3799c16a... Disable WLAN_DEBUG
 }
 
 static void
@@ -531,12 +529,8 @@ htt_t2h_stats_rx_rem_buf_stats_print(
 	qdf_nofl_info("  %u times f/w write & read indices on MAC ring are equal",
 		      stats_ptr->fw_indices_equal);
 	qdf_nofl_info("  %u times f/w has no remote buffers to post to MAC",
-<<<<<<< HEAD
 		      stats_ptr->host_no_bufs);
-=======
-			stats_ptr->host_no_bufs);
 #endif
->>>>>>> 355d3799c16a... Disable WLAN_DEBUG
 }
 
 static void
@@ -586,7 +580,6 @@ htt_t2h_stats_txbf_info_buf_stats_print(
 		      stats_ptr->tx_txbf_ofdm[6],
 		      stats_ptr->tx_txbf_ofdm[7]);
 	qdf_nofl_info("tx_txbf_cck (0..6): %u, %u, %u, %u, %u, %u, %u",
-<<<<<<< HEAD
 		      stats_ptr->tx_txbf_cck[0],
 		      stats_ptr->tx_txbf_cck[1],
 		      stats_ptr->tx_txbf_cck[2],
@@ -594,16 +587,7 @@ htt_t2h_stats_txbf_info_buf_stats_print(
 		      stats_ptr->tx_txbf_cck[4],
 		      stats_ptr->tx_txbf_cck[5],
 		      stats_ptr->tx_txbf_cck[6]);
-=======
-		  stats_ptr->tx_txbf_cck[0],
-		  stats_ptr->tx_txbf_cck[1],
-		  stats_ptr->tx_txbf_cck[2],
-		  stats_ptr->tx_txbf_cck[3],
-		  stats_ptr->tx_txbf_cck[4],
-		  stats_ptr->tx_txbf_cck[5],
-		  stats_ptr->tx_txbf_cck[6]);
 #endif
->>>>>>> 355d3799c16a... Disable WLAN_DEBUG
 }
 
 static void
@@ -628,7 +612,6 @@ htt_t2h_stats_txbf_snd_buf_stats_print(
 		      stats_ptr->cbf_80[2],
 		      stats_ptr->cbf_80[3]);
 	qdf_nofl_info("sounding: %u, %u, %u, %u, %u, %u, %u, %u, %u",
-<<<<<<< HEAD
 		      stats_ptr->sounding[0],
 		      stats_ptr->sounding[1],
 		      stats_ptr->sounding[2],
@@ -638,18 +621,7 @@ htt_t2h_stats_txbf_snd_buf_stats_print(
 		      stats_ptr->sounding[6],
 		      stats_ptr->sounding[7],
 		      stats_ptr->sounding[8]);
-=======
-		  stats_ptr->sounding[0],
-		  stats_ptr->sounding[1],
-		  stats_ptr->sounding[2],
-		  stats_ptr->sounding[3],
-		  stats_ptr->sounding[4],
-		  stats_ptr->sounding[5],
-		  stats_ptr->sounding[6],
-		  stats_ptr->sounding[7],
-		  stats_ptr->sounding[8]);
 #endif
->>>>>>> 355d3799c16a... Disable WLAN_DEBUG
 }
 
 static void
@@ -685,12 +657,8 @@ htt_t2h_stats_tx_selfgen_buf_stats_print(
 	qdf_nofl_info("  %u mu_brp1_err",
 		      stats_ptr->mu_brp1_err);
 	qdf_nofl_info("  %u mu_brp2_err",
-<<<<<<< HEAD
 		      stats_ptr->mu_brp2_err);
-=======
-			stats_ptr->mu_brp2_err);
 #endif
->>>>>>> 355d3799c16a... Disable WLAN_DEBUG
 }
 
 static void
@@ -733,12 +701,8 @@ htt_t2h_stats_wifi2_error_stats_print(
 		qdf_nofl_info("  %u", stats_ptr->phy_errs[i]);
 	qdf_nofl_info("\n");
 	qdf_nofl_info("  %u rx_rate_inval",
-<<<<<<< HEAD
 		      stats_ptr->rx_rate_inval);
-=======
-			stats_ptr->rx_rate_inval);
 #endif
->>>>>>> 355d3799c16a... Disable WLAN_DEBUG
 }
 
 static void
@@ -756,12 +720,8 @@ htt_t2h_rx_musu_ndpa_pkts_stats_print(
 	qdf_nofl_info("  %u Number of TXBF retried NDPA",
 		      stats_ptr->txbf_ndpa_retry_count);
 	qdf_nofl_info("  %u Total number of TXBF NDPA",
-<<<<<<< HEAD
 		      stats_ptr->txbf_total_ndpa_count);
-=======
-			stats_ptr->txbf_total_ndpa_count);
 #endif
->>>>>>> 355d3799c16a... Disable WLAN_DEBUG
 }
 
 #define HTT_TICK_TO_USEC(ticks, microsec_per_tick) (ticks * microsec_per_tick)

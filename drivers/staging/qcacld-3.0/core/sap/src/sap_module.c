@@ -1274,6 +1274,8 @@ static inline void sap_start_csa_restart(struct mac_context *mac,
  *
  * Return: string reason
  */
+
+#ifdef WLAN_DEBUG
 static char *sap_get_csa_reason_str(enum sap_csa_reason_code reason)
 {
 	switch (reason) {
@@ -1301,6 +1303,7 @@ static char *sap_get_csa_reason_str(enum sap_csa_reason_code reason)
 		return "UNKNOWN";
 	}
 }
+#endif
 
 QDF_STATUS wlansap_set_channel_change_with_csa(struct sap_context *sap_ctx,
 					       uint32_t target_chan_freq,
