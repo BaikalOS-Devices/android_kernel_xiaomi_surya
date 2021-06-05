@@ -27,8 +27,6 @@
  * instructions.
  */
 
-#define arch_spin_lock_flags(lock, flags) arch_spin_lock(lock)
-
 static inline void arch_spin_lock(arch_spinlock_t *lock)
 {
 	unsigned int tmp;
@@ -75,6 +73,7 @@ static inline int arch_spin_trylock(arch_spinlock_t *lock)
 
 	asm volatile(ARM64_LSE_ATOMIC_INSN(
 	/* LL/SC */
+	"	prfm	pstl1strm, %2\n"
 	"1:	ldaxr	%w0, %2\n"
 	"	eor	%w1, %w0, %w0, ror #16\n"
 	"	cbnz	%w1, 2f\n"
@@ -123,11 +122,6 @@ static inline int arch_spin_value_unlocked(arch_spinlock_t lock)
 
 static inline int arch_spin_is_locked(arch_spinlock_t *lock)
 {
-	/*
-	 * Ensure prior spin_lock operations to other locks have completed
-	 * on this CPU before we test whether "lock" is locked.
-	 */
-	smp_mb(); /* ^^^ */
 	return !arch_spin_value_unlocked(READ_ONCE(*lock));
 }
 
@@ -139,13 +133,6 @@ static inline int arch_spin_is_contended(arch_spinlock_t *lock)
 #define arch_spin_is_contended	arch_spin_is_contended
 
 #include <asm/qrwlock.h>
-
-#define arch_read_lock_flags(lock, flags) arch_read_lock(lock)
-#define arch_write_lock_flags(lock, flags) arch_write_lock(lock)
-
-#define arch_spin_relax(lock)	cpu_relax()
-#define arch_read_relax(lock)	cpu_relax()
-#define arch_write_relax(lock)	cpu_relax()
 
 /* See include/linux/spinlock.h */
 #define smp_mb__after_spinlock()	smp_mb()

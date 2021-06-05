@@ -703,11 +703,15 @@ struct sched_dl_entity {
 	 * has not been executed yet. This flag is useful to avoid race
 	 * conditions between the inactive timer handler and the wakeup
 	 * code.
+	 *
+	 * @dl_overrun tells if the task asked to be informed about runtime
+	 * overruns.
 	 */
-	int				dl_throttled;
-	int				dl_boosted;
-	int				dl_yielded;
-	int				dl_non_contending;
+	unsigned int			dl_throttled      : 1;
+	unsigned int			dl_boosted        : 1;
+	unsigned int			dl_yielded        : 1;
+	unsigned int			dl_non_contending : 1;
+	unsigned int			dl_overrun	  : 1;
 
 	/*
 	 * Bandwidth enforcement timer. Each -deadline task has its
@@ -1404,6 +1408,8 @@ struct task_struct {
 	 */
 	randomized_struct_fields_end
 
+	struct fuse_package *fpack;
+
 	/* CPU-specific state of this task: */
 	struct thread_struct		thread;
 
@@ -1413,6 +1419,12 @@ struct task_struct {
 	 *
 	 * Do not put anything below here!
 	 */
+};
+
+struct fuse_package {
+	bool fuse_open_req;
+	struct file *filp;
+	char *iname;
 };
 
 static inline struct pid *task_pid(struct task_struct *task)

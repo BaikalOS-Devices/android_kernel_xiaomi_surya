@@ -557,6 +557,7 @@ isolate_fail:
 
 /**
  * isolate_freepages_range() - isolate free pages.
+ * @cc:        Compaction control structure.
  * @start_pfn: The first PFN to start isolating.
  * @end_pfn:   The one-past-last PFN.
  *
@@ -1910,6 +1911,7 @@ static void compact_node(int nid)
 	}
 }
 
+extern void zswap_compact(void);
 /* Compact all nodes in the system */
 static void compact_nodes(void)
 {
@@ -1920,7 +1922,11 @@ static void compact_nodes(void)
 
 	for_each_online_node(nid)
 		compact_node(nid);
+
+	zswap_compact();
 }
+
+void zram_compact(void);
 
 static void do_compaction(struct work_struct *work)
 {
@@ -1932,6 +1938,9 @@ static void do_compaction(struct work_struct *work)
 
 	/* Do full compaction */
 	compact_nodes();
+
+	/* Do ZRAM compaction */
+	zram_compact();
 
 	/* Force compaction timeout */
 	compaction_forced_timeout = jiffies + msecs_to_jiffies(compaction_timeout_ms);
@@ -2159,7 +2168,8 @@ int kcompactd_run(int nid)
 	if (pgdat->kcompactd)
 		return 0;
 
-	pgdat->kcompactd = kthread_run(kcompactd, pgdat, "kcompactd%d", nid);
+	pgdat->kcompactd = kthread_run_perf_critical(cpu_perf_mask, kcompactd,
+					pgdat, "kcompactd%d", nid);
 	if (IS_ERR(pgdat->kcompactd)) {
 		pr_err("Failed to start kcompactd on node %d\n", nid);
 		ret = PTR_ERR(pgdat->kcompactd);
