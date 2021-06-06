@@ -29,6 +29,8 @@ struct sugov_tunables {
 	unsigned int hispeed_freq;
 	unsigned int rtg_boost_freq;
 	bool pl;
+    unsigned int scaling_multiplier;
+    unsigned int scaling_divider;
 };
 
 struct sugov_policy {
@@ -288,7 +290,15 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
 
-	freq = (freq + (freq >> 2)) * util / max;
+    if( sg_policy->tunables->scaling_multiplier !=0  && sg_policy->tunables->scaling_divider !=0  ) 
+    {
+	    freq = ((freq * sg_policy->tunables->scaling_multiplier)/sg_policy->tunables->scaling_divider) * util / max;
+    } 
+    else 
+    {
+	    freq = (freq + (freq >> 2)) * util / max;
+    }
+
 	trace_sugov_next_freq(policy->cpu, util, max, freq);
 
 	if (freq == sg_policy->cached_raw_freq && !sg_policy->need_freq_update)
@@ -835,12 +845,58 @@ static ssize_t pl_store(struct gov_attr_set *attr_set, const char *buf,
 	return count;
 }
 
+static ssize_t scaling_multiplier_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->scaling_multiplier);
+}
+
+static ssize_t scaling_multiplier_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	unsigned int val;
+
+	if (kstrtouint(buf, 10, &val))
+		return -EINVAL;
+
+	tunables->scaling_multiplier = val;
+
+	return count;
+}
+
+static ssize_t scaling_divider_show(struct gov_attr_set *attr_set,
+					char *buf)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->scaling_divider);
+}
+
+static ssize_t scaling_divider_store(struct gov_attr_set *attr_set,
+					 const char *buf, size_t count)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	unsigned int val;
+
+	if (kstrtouint(buf, 10, &val))
+		return -EINVAL;
+
+	tunables->scaling_divider = val;
+
+	return count;
+}
+
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr hispeed_load = __ATTR_RW(hispeed_load);
 static struct governor_attr hispeed_freq = __ATTR_RW(hispeed_freq);
 static struct governor_attr rtg_boost_freq = __ATTR_RW(rtg_boost_freq);
 static struct governor_attr pl = __ATTR_RW(pl);
+static struct governor_attr scaling_multiplier = __ATTR_RW(scaling_multiplier);
+static struct governor_attr scaling_divider = __ATTR_RW(scaling_divider);
 
 static struct attribute *sugov_attributes[] = {
 	&up_rate_limit_us.attr,
@@ -849,6 +905,8 @@ static struct attribute *sugov_attributes[] = {
 	&hispeed_freq.attr,
 	&rtg_boost_freq.attr,
 	&pl.attr,
+    &scaling_multiplier.attr,
+    &scaling_divider.attr,
 	NULL
 };
 
