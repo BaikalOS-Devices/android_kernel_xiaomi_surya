@@ -21,6 +21,7 @@
 #include <linux/mm.h>
 #include <linux/msm_adreno_devfreq.h>
 #include <asm/cacheflush.h>
+#include <drm/drm_refresh_rate.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
 
@@ -64,7 +65,7 @@ static ssize_t show_##name(struct device *dev,				\
 {									\
 	struct devfreq *df = to_devfreq(dev);				\
 	struct devfreq_msm_adreno_tz_data *hw = df->data;				\
-	return snprintf(buf, PAGE_SIZE, "%u\n", hw->name);		\
+	return snprintf(buf, PAGE_SIZE, "%d\n", hw->name);		\
 }
 
 #define store_attr(name, _min, _max) \
@@ -76,7 +77,7 @@ static ssize_t store_##name(struct device *dev,				\
 	struct devfreq_msm_adreno_tz_data *hw = df->data;				\
 	int ret;							\
 	int val;						\
-	ret = kstrtouint(buf, 10, &val);				\
+	ret = kstrtoint(buf, 10, &val);				\
 	if (ret)							\
 		return ret;						\
 	val = max(val, _min);						\
@@ -90,8 +91,9 @@ show_attr(__attr)			\
 store_attr(__attr, min, max)		\
 static DEVICE_ATTR(__attr, 0644, show_##__attr, store_##__attr)
 
-gov_attr(load_mul,0,10);
-gov_attr(load_div,0,10);
+gov_attr(load_mul,-10,10);
+gov_attr(load_div,-10,10);
+gov_attr(scale_by_refresh_rate,0,1);
 
 static u64 suspend_time;
 static u64 suspend_start;
@@ -172,6 +174,7 @@ static const struct device_attribute *adreno_tz_attr_list[] = {
 		&dev_attr_suspend_time,
         &dev_attr_load_mul,
         &dev_attr_load_div,
+        &dev_attr_scale_by_refresh_rate,
 		NULL
 };
 
@@ -431,6 +434,11 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
     		scm_data[2] = (priv->bin.busy_time * (10 + priv->load_mul)) / 10;
         } else {
 			scm_data[2] = priv->bin.busy_time;
+        }
+
+        if( priv->scale_by_refresh_rate ) {
+            unsigned int refresh_rate = dsi_panel_get_refresh_rate();
+            scm_data[2] = (scm_data[2] * refresh_rate) / 60;
         }
 
 		scm_data[3] = context_count;
