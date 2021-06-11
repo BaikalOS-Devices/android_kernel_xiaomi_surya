@@ -6806,6 +6806,9 @@ int dsi_display_validate_mode_change(struct dsi_display *display,
 		/* dfps and dynamic clock with const fps use case */
 		if (dsi_display_mode_switch_dfps(cur_mode, adj_mode)) {
 			dsi_panel_get_dfps_caps(display->panel, &dfps_caps);
+			if (cur_mode->timing.refresh_rate != adj_mode->timing.refresh_rate) {
+				WRITE_ONCE(cur_refresh_rate, adj_mode->timing.refresh_rate);
+			}
 			if (dfps_caps.dfps_support ||
 			    dyn_clk_caps->maintain_const_fps) {
 				adj_mode->dsi_mode_flags |= DSI_MODE_FLAG_VRR;
@@ -7740,6 +7743,11 @@ int dsi_display_pre_commit(void *display,
 	return rc;
 }
 
+unsigned int dsi_panel_get_refresh_rate(void)
+{
+	return READ_ONCE(cur_refresh_rate);
+}
+
 int dsi_display_enable(struct dsi_display *display)
 {
 	int rc = 0;
@@ -7778,6 +7786,7 @@ int dsi_display_enable(struct dsi_display *display)
 	mutex_lock(&display->display_lock);
 
 	mode = display->panel->cur_mode;
+	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
 
 	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
 
