@@ -3241,15 +3241,15 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 
 	if (evdata->data && ts) {
 		blank = evdata->data;
-		if (event == DRM_EARLY_EVENT_BLANK) {
+		if (event == MSM_DRM_EARLY_EVENT_BLANK) {
     		NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
-			if (*blank == DRM_BLANK_POWERDOWN) {
+			if (*blank == MSM_DRM_BLANK_POWERDOWN) {
 				cancel_work_sync(&ts->resume_work);
 				nvt_ts_suspend(&ts->client->dev);
 			}
-		} else if (event == DRM_EVENT_BLANK) {
+		} else if (event == MSM_DRM_EVENT_BLANK) {
 			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
-			if (*blank == DRM_BLANK_UNBLANK) {
+			if (*blank == MSM_DRM_BLANK_UNBLANK) {
 				//nvt_ts_resume(&ts->client->dev);
 				queue_work(ts->workqueue, &ts->resume_work);
 			}
