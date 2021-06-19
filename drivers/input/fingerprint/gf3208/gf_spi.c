@@ -542,7 +542,7 @@ static long gf_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long a
  static void notification_work(struct work_struct *work)
 {
 	pr_info("%s unblank\n", __func__);
-	dsi_bridge_interface_enable(FP_UNLOCK_REJECTION_TIMEOUT);
+	//dsi_bridge_interface_enable(FP_UNLOCK_REJECTION_TIMEOUT);
 }
 
 static int gf_open(struct inode *inode, struct file *filp)
