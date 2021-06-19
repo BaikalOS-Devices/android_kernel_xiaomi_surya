@@ -45,6 +45,7 @@
 #define DSI_CLOCK_BITRATE_RADIX 10
 #define MAX_TE_SOURCE_ID  2
 
+
 DEFINE_MUTEX(dsi_display_clk_mutex);
 
 static char dsi_display_primary[MAX_CMDLINE_PARAM_LEN];
@@ -59,6 +60,7 @@ static const struct of_device_id dsi_display_dt_match[] = {
 	{}
 };
 
+static int dynamic_refresh_rate = -1;
 static unsigned int cur_refresh_rate = 60;
 
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
@@ -1061,10 +1063,18 @@ int dsi_display_set_power(struct drm_connector *connector,
 {
 	struct dsi_display *display = disp;
 	int rc = 0;
+	struct drm_device *dev = NULL;
 
 	if (!display || !display->panel) {
 		pr_err("invalid display/panel\n");
 		return -EINVAL;
+	}
+
+	if (!connector || !connector->dev) {
+		pr_err("invalid connector/dev\n");
+		return -EINVAL;
+	} else {
+		dev = connector->dev;
 	}
 
 	switch (power_mode) {
@@ -1081,8 +1091,15 @@ int dsi_display_set_power(struct drm_connector *connector,
 		break;
 	case SDE_MODE_DPMS_OFF:
 	default:
+		if (dev->pre_state != SDE_MODE_DPMS_LP1 &&
+                                        dev->pre_state != SDE_MODE_DPMS_LP2)
+			break;
+
+		rc = dsi_panel_set_nolp(display->panel);
 		return rc;
 	}
+
+	dev->pre_state = power_mode;
 
 	pr_debug("Power mode transition from %d to %d %s",
 		 display->panel->power_mode, power_mode,
@@ -3901,6 +3918,17 @@ static bool dsi_display_is_seamless_dfps_possible(
 			return false;
 	}
 
+
+    if( dynamic_refresh_rate != -1 ) {
+        if( cur->timing.refresh_rate == dynamic_refresh_rate ) {
+            pr_info("Current rate is equal to fixed one %d", dynamic_refresh_rate);
+            return false;
+        }
+        if( dynamic_refresh_rate != tgt->timing.refresh_rate ) {
+            pr_info("Attempt to change refresh rate to %d blocked. Fixed at %d", tgt->timing.refresh_rate, dynamic_refresh_rate);
+            return false;
+        }
+    }
 	/* skip polarity comparison */
 
 	if (cur->timing.refresh_rate == tgt->timing.refresh_rate)
@@ -4336,7 +4364,7 @@ static int dsi_display_dfps_update(struct dsi_display *display,
 
 	/* For split DSI, update the clock master first */
 
-	pr_debug("configuring seamless dynamic fps\n\n");
+	pr_debug("configuring seamless dynamic dfps :");
 	SDE_EVT32(SDE_EVTLOG_FUNC_ENTRY);
 
 	m_ctrl = &display->ctrl[display->clk_master_idx];
@@ -4528,7 +4556,7 @@ static bool dsi_display_validate_mode_seamless(struct dsi_display *display,
 	/* Currently the only seamless transition is dynamic fps */
 	rc = dsi_display_get_dfps_timing(display, adj_mode, 0);
 	if (rc) {
-		pr_debug("Dynamic FPS not supported for seamless\n");
+		pr_err("Dynamic FPS not supported for seamless\n");
 	} else {
 		pr_debug("Mode switch is seamless Dynamic FPS\n");
 		adj_mode->dsi_mode_flags |= DSI_MODE_FLAG_DFPS |
@@ -4573,6 +4601,7 @@ static int dsi_display_set_mode_sub(struct dsi_display *display,
 
 	if (mode->dsi_mode_flags &
 			(DSI_MODE_FLAG_DFPS | DSI_MODE_FLAG_VRR)) {
+
 		rc = dsi_display_dfps_update(display, mode);
 		if (rc) {
 			pr_err("[%s]DSI dfps update failed, rc=%d\n",
@@ -4989,12 +5018,70 @@ static DEVICE_ATTR(dynamic_dsi_clock, 0644,
 			sysfs_dynamic_dsi_clk_read,
 			sysfs_dynamic_dsi_clk_write);
 
+static ssize_t sysfs_dynamic_refresh_rate_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int rc = 0;
+
+	rc = snprintf(buf, PAGE_SIZE, "%d\n", dynamic_refresh_rate);
+	pr_info("%s: dynamic refresh rate is %d\n", __func__, dynamic_refresh_rate);
+
+	return rc;
+}
+
+static ssize_t sysfs_dynamic_refresh_rate_write(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc = 0;
+
+	rc = kstrtoint(buf, 0, &dynamic_refresh_rate);
+	if (rc) {
+		pr_err("%s: kstrtoint failed. rc=%d\n", __func__, rc);
+		return rc;
+	}
+
+	pr_info("%s: dynamic refresh rate set %d\n", __func__, dynamic_refresh_rate);
+
+	return rc;
+
+}
+
+static ssize_t sysfs_current_refresh_rate_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int rc = 0;
+
+	rc = snprintf(buf, PAGE_SIZE, "%d\n", cur_refresh_rate);
+	//pr_info("%s: current refresh rate is %d\n", __func__, cur_refresh_rate);
+
+	return rc;
+}
+
+static DEVICE_ATTR(dynamic_refresh_rate, 0644,
+			sysfs_dynamic_refresh_rate_read,
+			sysfs_dynamic_refresh_rate_write);
+
+static DEVICE_ATTR(current_refresh_rate, 0444,
+			sysfs_current_refresh_rate_read, 
+            NULL);
+
 static struct attribute *dynamic_dsi_clock_fs_attrs[] = {
 	&dev_attr_dynamic_dsi_clock.attr,
 	NULL,
 };
+
+static struct attribute *dynamic_refresh_rate_fs_attrs[] = {
+    &dev_attr_dynamic_refresh_rate.attr,
+    &dev_attr_current_refresh_rate.attr,
+	NULL,
+};
+
 static struct attribute_group dynamic_dsi_clock_fs_attrs_group = {
 	.attrs = dynamic_dsi_clock_fs_attrs,
+};
+
+static struct attribute_group dynamic_refresh_rate_fs_attrs_group = {
+	.attrs = dynamic_refresh_rate_fs_attrs,
 };
 
 static int dsi_display_validate_split_link(struct dsi_display *display)
@@ -5042,6 +5129,9 @@ static int dsi_display_sysfs_init(struct dsi_display *display)
 		rc = sysfs_create_group(&dev->kobj,
 			&dynamic_dsi_clock_fs_attrs_group);
 
+	rc = sysfs_create_group(&dev->kobj,
+			&dynamic_refresh_rate_fs_attrs_group);
+
 	return rc;
 
 }
@@ -5053,6 +5143,9 @@ static int dsi_display_sysfs_deinit(struct dsi_display *display)
 	if (display->panel->panel_mode == DSI_OP_CMD_MODE)
 		sysfs_remove_group(&dev->kobj,
 			&dynamic_dsi_clock_fs_attrs_group);
+
+	sysfs_remove_group(&dev->kobj,
+		&dynamic_refresh_rate_fs_attrs_group);
 
 	return 0;
 
@@ -6585,8 +6678,8 @@ int dsi_display_get_panel_vfp(void *dsi_display,
 		refresh_rate = display->panel->cur_mode->timing.refresh_rate;
 
 	dsi_panel_get_dfps_caps(display->panel, &dfps_caps);
-	if (dfps_caps.dfps_support)
-		refresh_rate = dfps_caps.max_refresh_rate;
+	//if (dfps_caps.dfps_support)
+	//	refresh_rate = dfps_caps.max_refresh_rate;
 
 	if (!refresh_rate) {
 		mutex_unlock(&display->display_lock);
@@ -6718,19 +6811,16 @@ int dsi_display_validate_mode_change(struct dsi_display *display,
 		/* dfps and dynamic clock with const fps use case */
 		if (dsi_display_mode_switch_dfps(cur_mode, adj_mode)) {
 			dsi_panel_get_dfps_caps(display->panel, &dfps_caps);
-			if (cur_mode->timing.refresh_rate != adj_mode->timing.refresh_rate) {
-				WRITE_ONCE(cur_refresh_rate, adj_mode->timing.refresh_rate);
-			}
 			if (dfps_caps.dfps_support ||
 			    dyn_clk_caps->maintain_const_fps) {
-				pr_debug("mode switch is variable refresh\n");
 				adj_mode->dsi_mode_flags |= DSI_MODE_FLAG_VRR;
 				SDE_EVT32(cur_mode->timing.refresh_rate,
 					adj_mode->timing.refresh_rate,
 					cur_mode->timing.h_front_porch,
 					adj_mode->timing.h_front_porch);
 			}
-		}
+		} 
+
 		/* dynamic clk change use case */
 		if (cur_mode->pixel_clk_khz != adj_mode->pixel_clk_khz) {
 			if (dyn_clk_caps->dyn_clk_support) {
@@ -6758,7 +6848,9 @@ int dsi_display_validate_mode_change(struct dsi_display *display,
 		}
 	}
 
+
 error:
+
 	mutex_unlock(&display->display_lock);
 	return rc;
 }
@@ -6816,6 +6908,11 @@ int dsi_display_validate_mode(struct dsi_display *display,
 		}
 	}
 
+    if( display->panel == NULL ||  display->panel->cur_mode == NULL || display->panel->cur_mode->timing.refresh_rate != adj_mode.timing.refresh_rate ) {
+       	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
+        pr_info("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
+    }
+
 error:
 	mutex_unlock(&display->display_lock);
 	return rc;
@@ -6862,6 +6959,11 @@ int dsi_display_set_mode(struct dsi_display *display,
 			goto error;
 		}
 	}
+
+    if( display->panel->cur_mode->timing.refresh_rate != adj_mode.timing.refresh_rate ) {
+       	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
+        pr_info("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
+    }
 
 	memcpy(display->panel->cur_mode, &adj_mode, sizeof(adj_mode));
 error:
@@ -7689,6 +7791,8 @@ int dsi_display_enable(struct dsi_display *display)
 
 	mode = display->panel->cur_mode;
 	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
+    pr_info("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
+
 
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
 		rc = dsi_panel_switch(display->panel);
