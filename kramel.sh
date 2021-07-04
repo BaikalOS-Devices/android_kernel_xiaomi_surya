@@ -314,6 +314,8 @@ gen_zip() {
 		python2 "libufdt/utils/src/mkdtboimg.py" \
 					create "out/arch/arm64/boot/dtbo.img" --page_size=4096 out/arch/arm64/boot/dts/qcom/*.dtbo
 		mv "$KERNEL_DIR"/out/arch/arm64/boot/dtbo.img AnyKernel3/dtbo.img
+		ls "$KERNEL_DIR"/out/arch/arm64/boot/dts/qcom/
+		cp -r "$KERNEL_DIR"/out/arch/arm64/boot/dts/qcom/*.dtb AnyKernel3/dtb
 	fi
 	cdir AnyKernel3
 	make normal
