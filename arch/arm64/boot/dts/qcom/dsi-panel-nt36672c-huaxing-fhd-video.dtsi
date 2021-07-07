@@ -38,6 +38,8 @@
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-tx-eot-append;
 		qcom,dispparam-enabled;
+		qcom,ulps-enabled;
+		qcom,suspend-ulps-enabled;
 		qcom,mdss-dsi-panel-hdr-enabled;
 		qcom,mdss-dsi-panel-hdr-color-primaries = <14500 15500 32000
 			17000 15500 30000 8000 3000>;
@@ -49,7 +51,7 @@
 		qcom,mdss-dsi-post-init-delay = <1>;
 		qcom,mdss-dsi-qsync-min-refresh-rate = <30>;
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-enable-smart-fps;
+		//qcom,mdss-dsi-pan-enable-smart-fps;
 		qcom,mdss-dsi-pan-fps-update =
 			"dfps_immediate_porch_mode_vfp";
 		qcom,dsi-supported-dfps-list = <120 90 60 50 30>;
