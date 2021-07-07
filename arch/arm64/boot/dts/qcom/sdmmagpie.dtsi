@@ -457,7 +457,7 @@
 	};
 
 	chosen {
-		bootargs = "rcupdate.rcu_expedited=1 rcupdate.rcu_normal_after_boot=1 rcu_nocbs=0-7 quiet noirqdebug nosoftlockup mce=ignore_ce kpti=off";
+		bootargs = "rcupdate.rcu_normal_after_boot=1 rcu_nocbs=0-7 quiet noirqdebug nosoftlockup mce=ignore_ce kpti=off";
 	};
 
 	soc: soc { };
@@ -651,7 +651,8 @@
 		};
 		/* reserve for pstore */
 		ramoops_mem: ramoops@9d800000 {
-			compatible = "ramoops";
+			compatible = "removed-dma-pool", "ramoops";
+			no-map;
 			reg = <0x0 0x9d800000 0x0 0x00400000>;
 
 			record-size = <0x80000>;
@@ -1465,15 +1466,6 @@
 		interrupt-names = "tsens-upper-lower", "tsens-critical";
 		tsens-reinit-wa;
 		#thermal-sensor-cells = <1>;
-	};
-
-	dcc: dcc_v2@10a2000 {
-		compatible = "qcom,dcc-v2";
-		reg = <0x10a2000 0x1000>,
-		      <0x10ae000 0x2000>;
-		reg-names = "dcc-base", "dcc-ram-base";
-
-		dcc-ram-offset = <0x6000>;
 	};
 
 	qcom,llcc@9200000 {
@@ -2515,14 +2507,6 @@
 		qcom,no-clock-support;
 		iommus = <&apps_smmu 0x0504 0x0011>,
 			<&apps_smmu 0x0514 0x0011>;
-	};
-
-	qcom_tzlog: tz-log@146aa720 {
-		compatible = "qcom,tz-log";
-		reg = <0x146aa720 0x3000>;
-		qcom,hyplog-enabled;
-		hyplog-address-offset = <0x410>;
-		hyplog-size-offset = <0x414>;
 	};
 
 	spmi_bus: qcom,spmi@c440000 {

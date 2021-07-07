@@ -113,7 +113,7 @@ unsigned int sysctl_sched_cstate_aware = 1;
  *
  * (default SCHED_TUNABLESCALING_LOG = *(1+ilog(ncpus))
  */
-enum sched_tunable_scaling sysctl_sched_tunable_scaling = SCHED_TUNABLESCALING_LOG;
+enum sched_tunable_scaling sysctl_sched_tunable_scaling = SCHED_TUNABLESCALING_LINEAR;
 
 /*
  * Minimal preemption granularity for CPU-bound tasks:
@@ -146,7 +146,7 @@ unsigned int sysctl_sched_child_runs_first __read_mostly = 1;
 unsigned int sysctl_sched_wakeup_granularity		= 2000000UL;
 unsigned int normalized_sysctl_sched_wakeup_granularity	= 2000000UL;
 
-const_debug unsigned int sysctl_sched_migration_cost	= 2000000UL;
+unsigned int __read_mostly sysctl_sched_migration_cost	= 2000000UL;
 DEFINE_PER_CPU_READ_MOSTLY(int, sched_load_boost);
 
 #ifdef CONFIG_SMP
@@ -691,6 +691,7 @@ struct sched_entity *__pick_last_entity(struct cfs_rq *cfs_rq)
 
 	return rb_entry(last, struct sched_entity, run_node);
 }
+#endif
 
 /**************************************************************
  * Scheduling class statistics methods:
@@ -718,7 +719,6 @@ int sched_proc_update_handler(struct ctl_table *table, int write,
 
 	return 0;
 }
-#endif
 
 /*
  * delta /= w
@@ -8997,12 +8997,7 @@ again:
 		set_next_entity(cfs_rq, se);
 	}
 
-	if (hrtick_enabled(rq))
-		hrtick_start_fair(rq, p);
-
-	update_misfit_status(p, rq);
-
-	return p;
+	goto done;
 simple:
 #endif
 
@@ -9015,6 +9010,16 @@ simple:
 	} while (cfs_rq);
 
 	p = task_of(se);
+
+done: __maybe_unused
+#ifdef CONFIG_SMP
+	/*
+	 * Move the next running task to the front of
+	 * the list, so our cfs_tasks list becomes MRU
+	 * one.
+	 */
+	list_move(&p->se.group_node, &rq->cfs_tasks);
+#endif
 
 	if (hrtick_enabled(rq))
 		hrtick_start_fair(rq, p);
@@ -9512,11 +9517,12 @@ static void detach_task(struct task_struct *p, struct lb_env *env)
  */
 static struct task_struct *detach_one_task(struct lb_env *env)
 {
-	struct task_struct *p, *n;
+	struct task_struct *p;
 
 	lockdep_assert_held(&env->src_rq->lock);
 
-	list_for_each_entry_safe(p, n, &env->src_rq->cfs_tasks, se.group_node) {
+	list_for_each_entry_reverse(p,
+			&env->src_rq->cfs_tasks, se.group_node) {
 		if (!can_migrate_task(p, env))
 			continue;
 
@@ -9577,7 +9583,7 @@ redo:
 		if (env->idle != CPU_NOT_IDLE && env->src_rq->nr_running <= 1)
 			break;
 
-		p = list_first_entry(tasks, struct task_struct, se.group_node);
+		p = list_last_entry(tasks, struct task_struct, se.group_node);
 
 		env->loop++;
 		/* We've more or less seen every task there is, call it quits */
@@ -9657,7 +9663,7 @@ next:
 		trace_sched_load_balance_skip_tasks(env->src_cpu, env->dst_cpu,
 				env->src_grp_type, p->pid, load, task_util(p),
 				cpumask_bits(&p->cpus_allowed)[0]);
-		list_move_tail(&p->se.group_node, tasks);
+		list_move(&p->se.group_node, tasks);
 	}
 
 	if (env->flags & (LBF_IGNORE_BIG_TASKS |

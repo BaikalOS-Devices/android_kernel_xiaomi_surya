@@ -28,7 +28,7 @@
 #include <linux/slab.h>
 #include <linux/nospec.h>
 #include <linux/backing-dev.h>
-#include <trace/events/ext4.h>
+#include <notrace.h>
 
 #ifdef CONFIG_EXT4_DEBUG
 ushort ext4_mballoc_debug __read_mostly;
@@ -3316,10 +3316,12 @@ static void ext4_mb_collect_stats(struct ext4_allocation_context *ac)
 			atomic_inc(&sbi->s_bal_breaks);
 	}
 
+#if 0
 	if (ac->ac_op == EXT4_MB_HISTORY_ALLOC)
 		trace_ext4_mballoc_alloc(ac);
 	else
 		trace_ext4_mballoc_prealloc(ac);
+#endif
 }
 
 /*

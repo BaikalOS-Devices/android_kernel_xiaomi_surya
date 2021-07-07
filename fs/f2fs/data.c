@@ -23,8 +23,6 @@
 #include "f2fs.h"
 #include "node.h"
 #include "segment.h"
-#include "trace.h"
-#include <trace/events/f2fs.h>
 
 #define NUM_PREALLOC_POST_READ_CTXS	128
 
@@ -316,8 +314,7 @@ static bool f2fs_bio_post_read_required(struct bio *bio)
 
 static void f2fs_read_end_io(struct bio *bio)
 {
-	struct page *first_page = bio->bi_io_vec[0].bv_page;
-	struct f2fs_sb_info *sbi = F2FS_P_SB(first_page);
+	struct f2fs_sb_info *sbi = F2FS_P_SB(bio->bi_io_vec->bv_page);
 
 	if (time_to_inject(sbi, FAULT_READ_IO)) {
 		f2fs_show_injection_info(sbi, FAULT_READ_IO);
@@ -534,10 +531,12 @@ static inline void __submit_bio(struct f2fs_sb_info *sbi,
 			set_sbi_flag(sbi, SBI_NEED_CP);
 	}
 submit_io:
+#if 0
 	if (is_read_io(bio_op(bio)))
 		trace_f2fs_submit_read_bio(sbi->sb, type, bio);
 	else
 		trace_f2fs_submit_write_bio(sbi->sb, type, bio);
+#endif
 	submit_bio(bio);
 }
 
@@ -585,10 +584,12 @@ static void __submit_merged_bio(struct f2fs_bio_info *io)
 	__attach_io_flag(fio);
 	bio_set_op_attrs(io->bio, fio->op, fio->op_flags);
 
+#if 0
 	if (is_read_io(fio->op))
 		trace_f2fs_prepare_read_bio(io->sbi->sb, fio->type, io->bio);
 	else
 		trace_f2fs_prepare_write_bio(io->sbi->sb, fio->type, io->bio);
+#endif
 
 	__submit_bio(io->sbi, io->bio, fio->type);
 	io->bio = NULL;
@@ -3077,8 +3078,11 @@ result:
 					ret = 0;
 					if (wbc->sync_mode == WB_SYNC_ALL) {
 						cond_resched();
-						congestion_wait(BLK_RW_ASYNC,
-							DEFAULT_IO_TIMEOUT);
+#if (CONFIG_HZ > 100)
+						congestion_wait(BLK_RW_ASYNC, 2);
+#else
+						congestion_wait(BLK_RW_ASYNC, 1);
+#endif
 						goto retry_write;
 					}
 					goto next;
@@ -3783,6 +3787,7 @@ static sector_t f2fs_bmap(struct address_space *mapping, sector_t block)
 
 #ifdef CONFIG_MIGRATION
 #include <linux/migrate.h>
+#include <notrace.h>
 
 int f2fs_migrate_page(struct address_space *mapping,
 		struct page *newpage, struct page *page, enum migrate_mode mode)

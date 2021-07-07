@@ -538,13 +538,11 @@ static void __init mm_init(void)
 }
 
 int fpsensor;
-bool is_oos=false;
 
 asmlinkage __visible void __init start_kernel(void)
 {
 	char *command_line;
 	char *after_dashes;
-	char *o=NULL;
 
 	set_task_stack_end_magic(&init_task);
 	smp_setup_processor_id();
@@ -585,15 +583,6 @@ asmlinkage __visible void __init start_kernel(void)
 	jump_label_init();
 
 	fpsensor = strstr(command_line, "androidboot.fpsensor=fpc") ? 1 : 2;
-
-	o= strnstr(command_line, "androidboot.rom=OxygenOS", strlen(command_line));
-	if(o) {
-		is_oos=true;
-		pr_info("OxygenOS, locking refresh rates to 90 and 60hz");
-	} else {
-		is_oos=false;
-		 pr_info("AOSP, not doing any changes");
-	}
 
 	parse_early_param();
 	after_dashes = parse_args("Booting kernel",
@@ -1051,6 +1040,7 @@ static int __ref kernel_init(void *unused)
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
 	ftrace_free_init_mem();
+	jump_label_invalidate_initmem();
 	free_initmem();
 	mark_readonly();
 	system_state = SYSTEM_RUNNING;

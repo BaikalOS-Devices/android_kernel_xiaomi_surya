@@ -44,8 +44,6 @@
 #define DEFAULT_PANEL_PREFILL_LINES	25
 #define TICKS_IN_MICRO_SECOND		1000000
 
-extern bool is_oos;
-
 enum dsi_dsc_ratio_type {
 	DSC_8BPC_8BPP,
 	DSC_10BPC_8BPP,
@@ -1427,6 +1425,24 @@ static int dsi_panel_parse_dyn_clk_caps(struct dsi_panel *panel)
 	return 0;
 }
 
+unsigned int __read_mostly min_fps = 0;
+static int __init read_min_fps(char *s)
+{
+	if (s)
+		min_fps = simple_strtoul(s, NULL, 0);
+	return 1;
+}
+__setup("dfps.min_fps=", read_min_fps);
+
+unsigned int __read_mostly max_fps = 0;
+static int __init read_max_fps(char *s)
+{
+	if (s)
+		max_fps = simple_strtoul(s, NULL, 0);
+	return 1;
+}
+__setup("dfps.max_fps=", read_max_fps);
+
 static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -1466,44 +1482,45 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 		goto error;
 	}
 
-	if(!is_oos) {
-		dfps_caps->dfps_list_len = utils->count_u32_elems(utils->data,
-					  "qcom,dsi-supported-dfps-list");
-		if (dfps_caps->dfps_list_len < 1) {
-			pr_err("[%s] dfps refresh list not present\n", name);
-			rc = -EINVAL;
-			goto error;
-		}
-	} else {
-		/* HACK: hardcode supported refresh rates */
-		dfps_caps->dfps_list_len = 2;
+	dfps_caps->dfps_list_len = utils->count_u32_elems(utils->data,
+				  "qcom,dsi-supported-dfps-list");
+	if (dfps_caps->dfps_list_len < 1) {
+		pr_err("[%s] dfps refresh list not present\n", name);
+		rc = -EINVAL;
+		goto error;
 	}
 
 	dfps_caps->dfps_list = kcalloc(dfps_caps->dfps_list_len, sizeof(u32),
 			GFP_KERNEL);
-	if(!is_oos) {
-
-		if (!dfps_caps->dfps_list) {
-			rc = -ENOMEM;
-			goto error;
-		}
-
-		rc = utils->read_u32_array(utils->data,
-				"qcom,dsi-supported-dfps-list",
-				dfps_caps->dfps_list,
-				dfps_caps->dfps_list_len);
-		if (rc) {
-			pr_err("[%s] dfps refresh rate list parse failed\n", name);
-			rc = -EINVAL;
-			goto error;
-		}
-
-	} else {
-		dfps_caps->dfps_list[0] = 60;
-		dfps_caps->dfps_list[1] = 120;
+	if (!dfps_caps->dfps_list) {
+		rc = -ENOMEM;
+		goto error;
 	}
 
+	rc = utils->read_u32_array(utils->data,
+			"qcom,dsi-supported-dfps-list",
+			dfps_caps->dfps_list,
+			dfps_caps->dfps_list_len);
+	if (rc) {
+		pr_err("[%s] dfps refresh rate list parse failed\n", name);
+		rc = -EINVAL;
+		goto error;
+	}
 	dfps_caps->dfps_support = true;
+
+	if (min_fps || max_fps) {
+		pr_info("DEBUG :: %s:%d :: OVERRIDE dfps_caps->dfps_list_len = 2.", __func__, __LINE__);
+		dfps_caps->dfps_list_len = 2;
+
+		pr_info("DEBUG :: %s:%d :: OVERRIDE dfps_caps->min_refresh_rate = dfps_caps->dfps_list[0] = %lu.", __func__, __LINE__, min_fps);
+		dfps_caps->min_refresh_rate = dfps_caps->dfps_list[0] = (u32) min_fps;
+
+		pr_info("DEBUG :: %s:%d :: OVERRIDE dfps_caps->max_refresh_rate = dfps_caps->dfps_list[1] = %lu.", __func__, __LINE__, max_fps);
+		dfps_caps->max_refresh_rate = dfps_caps->dfps_list[1] = (u32) max_fps;
+
+		/* No need to calculate min-max */
+		goto error;
+	}
 
 	/* calculate max and min fps */
 	dfps_caps->max_refresh_rate = dfps_caps->dfps_list[0];
