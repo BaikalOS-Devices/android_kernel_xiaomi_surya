@@ -5042,7 +5042,7 @@ static ssize_t sysfs_dynamic_refresh_rate_write(struct device *dev,
 
 	pr_info("%s: dynamic refresh rate set %d\n", __func__, dynamic_refresh_rate);
 
-	return rc;
+	return count;
 
 }
 
