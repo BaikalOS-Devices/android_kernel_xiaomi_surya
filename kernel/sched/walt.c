@@ -3078,7 +3078,8 @@ static unsigned long thermal_cap_cpu[NR_CPUS];
 
 unsigned long thermal_cap(int cpu)
 {
-	return thermal_cap_cpu[cpu] ?: SCHED_CAPACITY_SCALE;
+    unsigned long tcap = thermal_cap_cpu[cpu] ?: SCHED_CAPACITY_SCALE;
+	return tcap;
 }
 
 unsigned long do_thermal_cap(int cpu, unsigned long thermal_max_freq)
@@ -3087,6 +3088,9 @@ unsigned long do_thermal_cap(int cpu, unsigned long thermal_max_freq)
 	struct sched_group *sg;
 	struct rq *rq = cpu_rq(cpu);
 	int nr_cap_states;
+    unsigned long ret = 1;
+
+   pr_info("thermal thermal_max_freq %ld",thermal_max_freq);
 
 	if (!max_cap[cpu]) {
 		rcu_read_lock();
@@ -3099,14 +3103,24 @@ unsigned long do_thermal_cap(int cpu, unsigned long thermal_max_freq)
 		sg = sd->groups;
 		nr_cap_states = sg->sge->nr_cap_states;
 		max_cap[cpu] = sg->sge->cap_states[nr_cap_states - 1].cap;
+        pr_info("thermal sched nr_cap_states %d max_cap[%d] = %ld",nr_cap_states,cpu, max_cap[cpu]);
 		rcu_read_unlock();
 	}
 
-	if (cpu_max_table_freq[cpu])
-		return div64_ul(thermal_max_freq * max_cap[cpu],
+	if (cpu_max_table_freq[cpu]) {
+        pr_info("thermal thermal_max_freq = %ld max_cap[%d] = %ld cpu_max_table_freq = %ld",thermal_max_freq, cpu, max_cap[cpu], cpu_max_table_freq[cpu]);
+		ret = div64_ul(thermal_max_freq * max_cap[cpu],
 				cpu_max_table_freq[cpu]);
-	else
-		return rq->cpu_capacity_orig;
+ 	} else {
+		ret =  rq->cpu_capacity_orig;
+    }
+
+    if( ret != rq->cpu_capacity_orig ) {
+        //dump_stack();
+        pr_info("thermal sched capacity %ld",ret);
+        //ret = rq->cpu_capacity_orig;
+    }
+    return ret;
 }
 
 static DEFINE_SPINLOCK(cpu_freq_min_max_lock);
