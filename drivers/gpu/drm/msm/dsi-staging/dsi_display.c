@@ -6962,7 +6962,7 @@ int dsi_display_set_mode(struct dsi_display *display,
 
     if( display->panel->cur_mode->timing.refresh_rate != adj_mode.timing.refresh_rate ) {
        	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
-        pr_info("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
+        pr_debug("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
     }
 
 	memcpy(display->panel->cur_mode, &adj_mode, sizeof(adj_mode));
