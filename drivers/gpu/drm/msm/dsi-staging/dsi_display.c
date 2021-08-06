@@ -6910,7 +6910,7 @@ int dsi_display_validate_mode(struct dsi_display *display,
 
     if( display->panel == NULL ||  display->panel->cur_mode == NULL || display->panel->cur_mode->timing.refresh_rate != adj_mode.timing.refresh_rate ) {
        	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
-        pr_info("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
+        pr_debug("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
     }
 
 error:
@@ -7791,7 +7791,7 @@ int dsi_display_enable(struct dsi_display *display)
 
 	mode = display->panel->cur_mode;
 	WRITE_ONCE(cur_refresh_rate, mode->timing.refresh_rate);
-    pr_info("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
+    pr_debug("cur_refresh_rate changed to %d fps\n", cur_refresh_rate);
 
 
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
