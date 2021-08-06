@@ -137,6 +137,9 @@ do {											\
 		printk(KERN_ERR "[bq2597x-STANDALONE]:%s:" fmt, __func__, ##__VA_ARGS__);\
 } while (0);
 
+
+#ifdef DEBUG
+
 #define bq_info(fmt, ...)								\
 do {											\
 	if (bq->mode == BQ25970_ROLE_MASTER)						\
@@ -156,6 +159,11 @@ do {											\
 	else										\
 		printk(KERN_DEBUG "[bq2597x-STANDALONE]:%s:" fmt, __func__, ##__VA_ARGS__);\
 } while (0);
+
+#else
+    #define bq_info(fmt, ...) do {} while (0);
+    #define bq_dbg(fmt, ...) do {} while (0);
+#endif
 
 enum hvdcp3_type {
 	HVDCP3_NONE = 0,
@@ -2124,8 +2132,8 @@ static void bq2597x_charger_info(struct bq2597x *bq)
 	bq2597x_get_adc_data(bq, ADC_VBAT, &vbat);
 	bq2597x_get_adc_data(bq, ADC_VBUS, &vbus);
 	bq2597x_get_adc_data(bq, ADC_IBUS, &ibus);
-	bq_info("charger info: vbat(%d), vbus(%d), ibus(%d)\n",
-				vbat, vbus, ibus);
+	//bq_dbg("charger info: vbat(%d), vbus(%d), ibus(%d)\n",
+	//			vbat, vbus, ibus);
 }
 
 /*
@@ -2136,7 +2144,7 @@ static irqreturn_t bq2597x_charger_interrupt(int irq, void *dev_id)
 {
 	struct bq2597x *bq = dev_id;
 
-	bq_dbg("INT OCCURED\n");
+	//bq_dbg("INT OCCURED\n");
 	mutex_lock(&bq->irq_complete);
 	bq->irq_waiting = true;
 	if (!bq->resume_completed) {
@@ -2424,7 +2432,7 @@ static int bq2597x_suspend(struct device *dev)
 	mutex_unlock(&bq->irq_complete);
 	bq2597x_enable_adc(bq, false);
 	cancel_delayed_work_sync(&bq->monitor_work);
-	bq_err("Suspend successfully!");
+	bq_dbg("Suspend successfully!");
 
 	return 0;
 }
@@ -2460,7 +2468,7 @@ static int bq2597x_resume(struct device *dev)
 
 	bq2597x_enable_adc(bq, true);
 	power_supply_changed(bq->fc2_psy);
-	bq_err("Resume successfully!");
+	bq_dbg("Resume successfully!");
 
 	return 0;
 }
