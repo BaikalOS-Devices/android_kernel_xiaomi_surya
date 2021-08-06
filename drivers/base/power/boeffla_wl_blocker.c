@@ -60,9 +60,7 @@ static void build_search_string(char *list1, char *list2)
 	sprintf(list_wl_search, ";%s;%s;", list1, list2);
 
 	// set flag if wakelock blocker should be active (for performance reasons)
-	if (strlen(list_wl_search) > 5)
-		wl_blocker_active = true;
-	else
+	if (strlen(list_wl_search) <= 5)
 		wl_blocker_active = false;
 }
 
@@ -155,6 +153,34 @@ static ssize_t debug_store(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+static ssize_t active_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	// return current debug status
+	return sprintf(buf, "Debug status: %d\n\nUser list: %s\nDefault list: %s\nSearch list: %s\nActive: %d\n",
+					wl_blocker_debug, list_wl, list_wl_default, list_wl_search, wl_blocker_active);
+}
+
+// store debug mode on/off (1/0)
+static ssize_t active_store(struct device *dev, struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int val;
+
+	// check data and store if valid
+	ret = sscanf(buf, "%d", &val);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	if (val == 1)
+		wl_blocker_active = true;
+	else
+		wl_blocker_active = false;
+
+	return count;
+}
+
 
 static ssize_t version_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -172,6 +198,7 @@ static ssize_t version_show(struct device *dev, struct device_attribute *attr, c
 static DEVICE_ATTR(wakelock_blocker, 0644, wakelock_blocker_show, wakelock_blocker_store);
 static DEVICE_ATTR(wakelock_blocker_default, 0644, wakelock_blocker_default_show, wakelock_blocker_default_store);
 static DEVICE_ATTR(debug, 0664, debug_show, debug_store);
+static DEVICE_ATTR(active, 0664, active_show, active_store);
 static DEVICE_ATTR(version, 0664, version_show, NULL);
 
 // define attributes
@@ -180,6 +207,7 @@ static struct attribute *boeffla_wl_blocker_attributes[] = {
 	&dev_attr_wakelock_blocker_default.attr,
 	&dev_attr_debug.attr,
 	&dev_attr_version.attr,
+	&dev_attr_active.attr,
 	NULL
 };
 
