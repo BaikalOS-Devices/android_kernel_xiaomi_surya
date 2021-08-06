@@ -158,21 +158,34 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	/* Unboost when the screen is off */
 	if (cpumask_test_cpu(policy->cpu, cpu_lp_mask) &&
 			test_bit(SCREEN_OFF, &b->state)) {
-		policy->min = CONFIG_IDLE_MIN_FREQ_LP;
 		return NOTIFY_OK;
 	}
 
 	else if (cpumask_test_cpu(policy->cpu, cpu_perf_mask) &&
 			test_bit(SCREEN_OFF, &b->state)) {
-		policy->min = CONFIG_IDLE_MIN_FREQ_PERF;
 		return NOTIFY_OK;
 	}
 
 	/* Boost CPU to max frequency for max boost */
-	if (test_bit(MAX_BOOST, &b->state)) {
+	/*if (test_bit(MAX_BOOST, &b->state)) {
 		policy->min = get_max_boost_freq(policy);
 		return NOTIFY_OK;
-	}
+	}*/
+
+	/*
+	 * Boost to policy->max if the boost frequency is higher. When
+	 * unboosting, set policy->min to the absolute min freq for the CPU.
+	 */
+	if (test_bit(INPUT_BOOST, &b->state)) {
+		int new_min = get_input_boost_freq(policy);
+        if( new_min > policy->min ) {
+            policy->min = new_min;
+            max_freq = min(policy->max, policy->min);
+            if( policy->min < max_freq ) {
+    			policy->min = max_freq;
+    		}        
+        }
+    }
 
 	return NOTIFY_OK;
 }
