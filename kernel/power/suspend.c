@@ -649,7 +649,7 @@ int pm_suspend(suspend_state_t state)
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
 		return -EINVAL;
 
-	pr_debug("suspend entry (%s)\n", mem_sleep_labels[state]);
+	pr_info("PM: suspend entry (%s)\n", mem_sleep_labels[state]);
 	pm_suspend_marker("entry");
     pm_suspend_stats(true);
 	error = enter_state(state);
@@ -662,7 +662,7 @@ int pm_suspend(suspend_state_t state)
     pm_suspend_stats(false);
 	pm_suspend_marker("exit");
 	measure_wake_up_time();
-	pr_debug("suspend exit\n");
+	pr_info("PM: suspend exit \n");
 	return error;
 }
 EXPORT_SYMBOL(pm_suspend);
