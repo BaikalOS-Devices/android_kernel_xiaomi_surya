@@ -841,7 +841,6 @@ static int handle_jeita(struct step_chg_info *chip)
 	batt_soc = pval.intval;
 	rc = power_supply_get_property(chip->bms_psy,
 			POWER_SUPPLY_PROP_FASTCHARGE_MODE, &pval);
-	pr_err("%s:fastcharge_mode=%d\n", __func__, pval.intval);
 	if (rc < 0) {
 		pr_err("Couldn't read fastcharge mode fail rc=%d\n", rc);
 		return rc;
@@ -878,8 +877,8 @@ static int handle_jeita(struct step_chg_info *chip)
 	if (!chip->usb_icl_votable)
 		goto set_jeita_fv;
 
-	pr_err("%s = %d FCC = %duA FV = %duV\n",
-		chip->jeita_fcc_config->param.prop_name, batt_temp, fcc_ua, fv_uv);
+	//pr_err("%s = %d FCC = %duA FV = %duV\n",
+	//	chip->jeita_fcc_config->param.prop_name, batt_temp, fcc_ua, fv_uv);
 
 	/* set and clear fast charge mode when soft jeita trigger and clear */
 	rc = power_supply_get_property(chip->usb_psy,
