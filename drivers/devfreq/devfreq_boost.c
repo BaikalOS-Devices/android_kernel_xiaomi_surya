@@ -12,6 +12,9 @@
 #include <linux/slab.h>
 #include <uapi/linux/sched/types.h>
 
+#include <linux/module.h>
+#include <linux/moduleparam.h>
+
 enum {
 	SCREEN_OFF,
 	INPUT_BOOST,
@@ -33,6 +36,15 @@ struct df_boost_drv {
 	struct notifier_block msm_drm_notif;
 	unsigned long last_input_jiffies;
 };
+
+static unsigned int frame_boost_ms = 0;
+module_param(frame_boost_ms, uint, 0664);
+
+static unsigned int launch_boost_ms = 0;
+module_param(launch_boost_ms, uint, 0664);
+
+static unsigned int devfreq_boost = 0;
+module_param(devfreq_boost, uint, 0664);
 
 static void devfreq_input_unboost(struct work_struct *work);
 static void devfreq_max_unboost(struct work_struct *work);
@@ -56,7 +68,7 @@ static struct df_boost_drv df_boost_drv_g __read_mostly = {
 
 static void __devfreq_boost_kick(struct boost_dev *b)
 {
-	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state))
+	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state) || !devfreq_boost )
 		return;
 
 	set_bit(INPUT_BOOST, &b->state);
@@ -78,7 +90,7 @@ static void __devfreq_boost_kick_max(struct boost_dev *b,
 	unsigned long boost_jiffies = msecs_to_jiffies(duration_ms);
 	unsigned long curr_expires, new_expires;
 
-	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state))
+	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state) || !devfreq_boost )
 		return;
 
 	do {
@@ -112,6 +124,23 @@ void devfreq_boost_kick_max(enum df_device device, unsigned int duration_ms)
 
 	__devfreq_boost_kick_max(d->devices + device, duration_ms);
 }
+
+void devfreq_boost_kick_frame(enum df_device device)
+{
+	struct df_boost_drv *d = &df_boost_drv_g;
+
+    if( frame_boost_ms ) 
+    	__devfreq_boost_kick_max(d->devices + device, frame_boost_ms );
+}
+
+void devfreq_boost_kick_launch(enum df_device device)
+{
+	struct df_boost_drv *d = &df_boost_drv_g;
+
+    if( launch_boost_ms ) 
+    	__devfreq_boost_kick_max(d->devices + device, launch_boost_ms );
+}
+
 
 void devfreq_register_boost_device(enum df_device device, struct devfreq *df)
 {
@@ -311,7 +340,7 @@ static int __init devfreq_boost_init(void)
 	for (i = 0; i < DEVFREQ_MAX; i++) {
 		struct boost_dev *b = d->devices + i;
 
-		thread[i] = kthread_run_perf_critical(cpu_perf_mask, devfreq_boost_thread,
+		thread[i] = kthread_run(devfreq_boost_thread,
 						      b, "devfreq_boostd/%d", i);
 		if (IS_ERR(thread[i])) {
 			ret = PTR_ERR(thread[i]);

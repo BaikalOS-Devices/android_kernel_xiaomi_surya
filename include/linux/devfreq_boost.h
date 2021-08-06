@@ -18,6 +18,8 @@ void devfreq_boost_kick(enum df_device device);
 void devfreq_boost_kick_max(enum df_device device, unsigned int duration_ms);
 void devfreq_register_boost_device(enum df_device device, struct devfreq *df);
 bool df_boost_within_input(unsigned long timeout_ms);
+void devfreq_boost_kick_frame(enum df_device device);
+void devfreq_boost_kick_launch(enum df_device device);
 #else
 static inline
 void devfreq_boost_kick(enum df_device device)
@@ -34,6 +36,14 @@ void devfreq_register_boost_device(enum df_device device, struct devfreq *df)
 static inline bool df_boost_within_input(unsigned long timeout_ms)
 {
 	return true;
+}
+static inline 
+void devfreq_boost_kick_frame(enum df_device device)
+{
+}
+static inline
+void devfreq_boost_kick_launch(enum df_device device)
+{
 }
 #endif
 
