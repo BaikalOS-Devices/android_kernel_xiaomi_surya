@@ -1965,7 +1965,7 @@ static int drv2624_haptics_erase(struct input_dev *dev, int effect_id)
 static void drv2624_haptics_set_gain(struct input_dev *dev, u16 gain)
 {
 	struct drv2624_data *pDRV2624 = input_get_drvdata(dev);
-#if 0
+#if 1
 	struct drv2624_constant_playinfo *play = &pDRV2624->play;
 	if (gain == 0)
 		return;
