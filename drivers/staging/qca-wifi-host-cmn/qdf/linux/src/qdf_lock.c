@@ -30,6 +30,8 @@
 #include <i_qdf_lock.h>
 #include <linux/suspend.h>
 
+#define WAKEUP_SOURCE_DEV
+
 /**
  * qdf_mutex_create() - Initialize a mutex
  * @m: mutex to initialize
@@ -269,6 +271,7 @@ qdf_export_symbol(qdf_wake_lock_name);
 	defined(WAKEUP_SOURCE_DEV)
 QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 {
+    pr_info("qdf_wake_lock_create: (1) %s",name);
 	qdf_mem_zero(lock, sizeof(*lock));
 	lock->priv = wakeup_source_register(lock->lock.dev, name);
 	if (!(lock->priv)) {
@@ -283,6 +286,7 @@ QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
 QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 {
+    pr_info("qdf_wake_lock_create: (2) %s",name);
 	wakeup_source_init(&(lock->lock), name);
 	lock->priv = &(lock->lock);
 	return QDF_STATUS_SUCCESS;
@@ -290,6 +294,7 @@ QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 #else
 QDF_STATUS qdf_wake_lock_create(qdf_wake_lock_t *lock, const char *name)
 {
+    pr_info("qdf_wake_lock_create: (3) %s - IGNORE",name);
 	return QDF_STATUS_SUCCESS;
 }
 #endif
@@ -311,7 +316,7 @@ QDF_STATUS qdf_wake_lock_acquire(qdf_wake_lock_t *lock, uint32_t reason)
 			    WIFI_POWER_EVENT_DEFAULT_WAKELOCK_TIMEOUT,
 			    WIFI_POWER_EVENT_WAKELOCK_TAKEN);
 	__pm_stay_awake(lock->priv);
-
+    
 	return QDF_STATUS_SUCCESS;
 }
 #else
