@@ -203,11 +203,13 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 
 	/* Boost CPU to max frequency for max boost */
 	if (test_bit(MAX_BOOST, &b->state)) {
-		policy->min = get_max_boost_freq(policy);
-        max_freq = min(policy->max, policy->min);
-        if( policy->min < max_freq ) {
-			policy->min = max_freq;
-		}
+		int new_min = get_input_boost_freq(policy);
+            if( new_min > policy->min ) {
+            max_freq = min(policy->max, policy->min);
+            if( policy->min < max_freq ) {
+    			policy->min = max_freq;
+    		}
+        }
 		return NOTIFY_OK;
 	}
 
@@ -216,11 +218,14 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	 * unboosting, set policy->min to the absolute min freq for the CPU.
 	 */
 	if (test_bit(INPUT_BOOST, &b->state)) {
-		policy->min = get_input_boost_freq(policy);
-        max_freq = min(policy->max, policy->min);
-        if( policy->min < max_freq ) {
-			policy->min = max_freq;
-		}
+		int new_min = get_input_boost_freq(policy);
+        if( new_min > policy->min ) {
+            policy->min = new_min;
+            max_freq = min(policy->max, policy->min);
+            if( policy->min < max_freq ) {
+    			policy->min = max_freq;
+    		}
+        }
     }
 
 	return NOTIFY_OK;
