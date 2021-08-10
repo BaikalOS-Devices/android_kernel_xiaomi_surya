@@ -151,6 +151,7 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 {
 	struct boost_drv *b = container_of(nb, typeof(*b), cpu_notif);
 	struct cpufreq_policy *policy = data;
+    int max_freq;
 
 	if (action != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
@@ -158,7 +159,7 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	/* Unboost when the screen is off */
 	if (cpumask_test_cpu(policy->cpu, cpu_lp_mask) &&
 			test_bit(SCREEN_OFF, &b->state)) {
-		policy->min = CONFIG_IDLE_MIN_FREQ_LP;
+		//policy->min = CONFIG_IDLE_MIN_FREQ_LP;
 		return NOTIFY_OK;
 	}
 
@@ -175,9 +176,10 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 		int new_min = get_input_boost_freq(policy);
         if( new_min > policy->min ) {
             policy->min = new_min;
-            if(policy->max < policy->min) {
-    			policy->max = policy->min;
-    		}
+            max_freq = min(policy->max, policy->min);
+            if( policy->min < max_freq ) {
+    			policy->min = max_freq;
+    		}        
         }
     }
 
