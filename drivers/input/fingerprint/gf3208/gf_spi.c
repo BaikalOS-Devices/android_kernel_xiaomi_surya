@@ -75,8 +75,7 @@ static int SPIDEV_MAJOR;
 static DECLARE_BITMAP(minors, N_SPI_MINORS);
 static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
-//static struct wake_lock fp_wakelock;
-static struct wakeup_source fp_ws;//for kernel 4.9
+static struct wakeup_source fp_ws;
 static struct gf_dev gf;
 
 extern int fpsensor;
@@ -274,6 +273,8 @@ static int gfspi_ioctl_clk_uninit(struct gf_dev *data)
 }
 #endif
 
+#if defined(SUPPORT_NAV_EVENT)
+
 static void nav_event_input(struct gf_dev *gf_dev, gf_nav_event_t nav_event)
 {
 	uint32_t nav_input = 0;
@@ -341,18 +342,21 @@ static void nav_event_input(struct gf_dev *gf_dev, gf_nav_event_t nav_event)
 	}
 }
 
+#endif
+
 static irqreturn_t gf_irq(int irq, void *handle)
 {
 #if defined(GF_NETLINK_ENABLE)
 	char msg[2] =  { 0x0 };
 	struct gf_dev *gf_dev = &gf;
+	__pm_wakeup_event(&fp_ws, 250);
 	msg[0] = GF_NET_EVENT_IRQ;
 	sendnlmsg(msg);
-	if (gf_dev->device_available == 1) {
+	//if (gf_dev->device_available == 1) {
 		pr_info("%s:shedule_work\n", __func__);
 		gf_dev->wait_finger_down = false;
 		schedule_work(&gf_dev->work);
-	}
+	//}
 #elif defined(GF_FASYNC)
 	struct gf_dev *gf_dev = &gf;
 
@@ -791,6 +795,8 @@ static int gf_probe(struct platform_device *pdev)
 	gf_dev->notifier = goodix_noti_block;
 	msm_drm_register_client(&gf_dev->notifier);
 
+	wakeup_source_init(&fp_ws, "fp_ws");
+
 	proc_entry = proc_create(PROC_NAME, 0644, NULL, &proc_file_ops);
 	if (NULL == proc_entry) {
 		pr_err("gf3258 Couldn't create proc entry!");
@@ -834,6 +840,8 @@ static int gf_remove(struct platform_device *pdev)
 #endif
 {
 	struct gf_dev *gf_dev = &gf;
+
+	wakeup_source_trash(&fp_ws);
 
 	msm_drm_unregister_client(&gf_dev->notifier);
 	if (gf_dev->input)

@@ -35,7 +35,6 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
-//#include <linux/wakelock.h>
 #include <linux/proc_fs.h>
 #include <linux/notifier.h>
 #include <linux/fb.h>
@@ -43,7 +42,7 @@
 #include <linux/msm_drm_notify.h>
 
 
-#define FPC_TTW_HOLD_TIME 2000
+#define FPC_TTW_HOLD_TIME 250
 #define FP_UNLOCK_REJECTION_TIMEOUT (FPC_TTW_HOLD_TIME - 500)
 #define RESET_LOW_SLEEP_MIN_US 5000
 #define RESET_LOW_SLEEP_MAX_US (RESET_LOW_SLEEP_MIN_US + 100)
@@ -86,8 +85,7 @@ struct fpc1020_data {
 	struct pinctrl_state *pinctrl_state[ARRAY_SIZE(pctl_names)];
 	struct regulator *vreg[ARRAY_SIZE(vreg_conf)];
 
-	//struct wake_lock ttw_wl;
-	struct wakeup_source ttw_ws;//for kernel 4.9
+	struct wakeup_source ttw_ws;
 	int irq_gpio;
 	int rst_gpio;
 	struct mutex lock; /* To set/get exported values in sysfs */
@@ -680,7 +678,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 	if (rc)
 		goto exit;
 
-	atomic_set(&fpc1020->wakeup_enabled, 0);
+	atomic_set(&fpc1020->wakeup_enabled, 1);
 
 	irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_PERF_AFFINE;
 	if (of_property_read_bool(dev->of_node, "fpc,enable-wakeup")) {
@@ -703,8 +701,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 	/* Request that the interrupt should be wakeable */
 	enable_irq_wake(gpio_to_irq(fpc1020->irq_gpio));
 
-	//wake_lock_init(&fpc1020->ttw_wl, WAKE_LOCK_SUSPEND, "fpc_ttw_wl");
-	wakeup_source_init(&fpc1020->ttw_ws, "fpc_ttw_ws");//for kernel 4.9
+	wakeup_source_init(&fpc1020->ttw_ws, "fpc_ttw_ws");
 
 	rc = sysfs_create_group(&dev->kobj, &attribute_group);
 	if (rc) {
@@ -745,8 +742,7 @@ static int fpc1020_remove(struct platform_device *pdev)
 	msm_drm_unregister_client(&fpc1020->fb_notifier);
 	sysfs_remove_group(&pdev->dev.kobj, &attribute_group);
 	mutex_destroy(&fpc1020->lock);
-	//wake_lock_destroy(&fpc1020->ttw_wl);
-	wakeup_source_trash(&fpc1020->ttw_ws);//for kernel 4.9
+	wakeup_source_trash(&fpc1020->ttw_ws);
 	(void)vreg_setup(fpc1020, "vdd_ana", false);
 	(void)vreg_setup(fpc1020, "vdd_io", false);
 	(void)vreg_setup(fpc1020, "vcc_spi", false);
