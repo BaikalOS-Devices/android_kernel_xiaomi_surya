@@ -19,6 +19,7 @@
 #endif
 
 enum {
+    INPUT_BOOST,
 	SCREEN_OFF,
 	MAX_BOOST
 };
@@ -172,7 +173,7 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	 * unboosting, set policy->min to the absolute min freq for the CPU.
 	 */
 	if (test_bit(INPUT_BOOST, &b->state)) {
-		int new_min = get_input_boost_freq(policy);
+		int new_min = get_max_boost_freq(policy);
         if( new_min > policy->min ) {
             policy->min = new_min;
             if(policy->max < policy->min) {
