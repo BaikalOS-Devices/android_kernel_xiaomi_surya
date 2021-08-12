@@ -257,14 +257,18 @@ int update_devfreq(struct devfreq *devfreq)
 
 	if (!mutex_is_locked(&devfreq->lock)) {
 		WARN(true, "devfreq->lock must be locked by the caller.\n");
+        //pr_err("devfreq->lock must be locked by the caller.\n");
 		return -EINVAL;
 	}
 
-	if (!devfreq->governor)
+	if (!devfreq->governor) {
+        //pr_err("devfreq no governor set\n");
 		return -EINVAL;
+    }
 
 	if (devfreq->max_boost) {
 		/* Use the max freq for max boosts */
+        //pr_err("devfreq boost max\n");
 		freq = ULONG_MAX;
 	} else {
 		/* Reevaluate the proper frequency */
@@ -280,6 +284,7 @@ int update_devfreq(struct devfreq *devfreq)
 	 * max_freq
 	 * min_freq
 	 */
+
 
 	if (devfreq->min_freq && freq < devfreq->min_freq) {
 		freq = devfreq->min_freq;
@@ -301,11 +306,13 @@ int update_devfreq(struct devfreq *devfreq)
 
 	err = devfreq->profile->target(devfreq->dev.parent, &freq, flags);
 	if (err) {
+        //if( devfreq->max_boost ) pr_err("Ignore devfreq boost -   profile rejected");
 		freqs.new = cur_freq;
 		devfreq_notify_transition(devfreq, &freqs, DEVFREQ_POSTCHANGE);
 		return err;
 	}
 
+    //if( devfreq->max_boost ) pr_err("New devfreq %d", freq);
 	freqs.new = freq;
 	devfreq_notify_transition(devfreq, &freqs, DEVFREQ_POSTCHANGE);
 
@@ -1136,8 +1143,9 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 	unsigned long max;
 
 	/* Minfreq is managed by devfreq_boost */
-	if (df->is_boost_device)
+	/*if (df->is_boost_device)
 		return count;
+    */
 
 	ret = sscanf(buf, "%lu", &value);
 	if (ret != 1)
@@ -1150,7 +1158,7 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 		ret = -EINVAL;
 		goto unlock;
 	}
-
+    pr_err("set min_freq  %d", value); 
 	df->min_freq = value;
 	update_devfreq(df);
 	ret = count;
@@ -1180,6 +1188,7 @@ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
 		goto unlock;
 	}
 
+    pr_err("set max_freq  %d", value); 
 	df->max_freq = value;
 	update_devfreq(df);
 	ret = count;

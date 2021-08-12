@@ -40,11 +40,14 @@ struct df_boost_drv {
 static unsigned int frame_boost_ms = 0;
 module_param(frame_boost_ms, uint, 0664);
 
-static unsigned int launch_boost_ms = 0;
+static unsigned int launch_boost_ms = 4000;
 module_param(launch_boost_ms, uint, 0664);
 
-static unsigned int devfreq_boost = 0;
+static unsigned int devfreq_boost = 1;
 module_param(devfreq_boost, uint, 0664);
+
+static unsigned int input_boost_ms = CONFIG_DEVFREQ_INPUT_BOOST_DURATION_MS;
+module_param(input_boost_ms, uint, 0664);
 
 static void devfreq_input_unboost(struct work_struct *work);
 static void devfreq_max_unboost(struct work_struct *work);
@@ -61,6 +64,36 @@ static void devfreq_max_unboost(struct work_struct *work);
 	.boost_freq = freq							\
 }
 
+
+unsigned short kick_boost = 0;
+
+int kick_boost_set_uint(const char *val, const struct kernel_param *kp)
+{
+    unsigned int* pvalue = kp->arg; 
+    int res = param_set_uint(val, kp); 
+    //pr_err("Kick boost res=%d",res);
+    if( !res ) {
+        if( kick_boost > 0  && kick_boost < 150000 ) {
+            //pr_err("Kick boost %u",kick_boost);
+    		devfreq_boost_kick_max(DEVFREQ_MSM_CPUBW,kick_boost);
+        }
+    }
+    return res;
+}
+
+const struct kernel_param_ops kick_boost_ops_uint = 
+{
+    .set = &kick_boost_set_uint, 
+    .get = &param_get_uint, 
+};
+
+module_param_cb(kick_boost,    /*filename*/
+    &kick_boost_ops_uint, /*operations*/
+    &kick_boost,               /* pointer to variable, contained parameter's value */
+    0664     /*permissions on file*/
+);
+
+
 static struct df_boost_drv df_boost_drv_g __read_mostly = {
 	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_MSM_CPUBW,
 		       CONFIG_DEVFREQ_MSM_CPUBW_BOOST_FREQ)
@@ -68,13 +101,15 @@ static struct df_boost_drv df_boost_drv_g __read_mostly = {
 
 static void __devfreq_boost_kick(struct boost_dev *b)
 {
-	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state) || !devfreq_boost )
+	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state) || !devfreq_boost || !input_boost_ms)
 		return;
 
-	set_bit(INPUT_BOOST, &b->state);
-	if (!mod_delayed_work(system_unbound_wq, &b->input_unboost,
-		msecs_to_jiffies(CONFIG_DEVFREQ_INPUT_BOOST_DURATION_MS)))
-		wake_up(&b->boost_waitq);
+    if( input_boost_ms > 0 ) {
+    	set_bit(INPUT_BOOST, &b->state);
+    	if (!mod_delayed_work(system_unbound_wq, &b->input_unboost,
+    		msecs_to_jiffies(input_boost_ms)))
+    		wake_up(&b->boost_waitq);
+    }
 }
 
 void devfreq_boost_kick(enum df_device device)
@@ -90,19 +125,24 @@ static void __devfreq_boost_kick_max(struct boost_dev *b,
 	unsigned long boost_jiffies = msecs_to_jiffies(duration_ms);
 	unsigned long curr_expires, new_expires;
 
-	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state) || !devfreq_boost )
+	if (!READ_ONCE(b->df) || test_bit(SCREEN_OFF, &b->state) || !devfreq_boost ) {
+        pr_err("Ignore boost - wrong state");
 		return;
+    }
 
 	do {
 		curr_expires = atomic_long_read(&b->max_boost_expires);
 		new_expires = jiffies + boost_jiffies;
 
 		/* Skip this boost if there's a longer boost in effect */
-		if (time_after(curr_expires, new_expires))
+		if (time_after(curr_expires, new_expires)) {
+            pr_err("Ignore boost - longer boost in effect");
 			return;
+        }
 	} while (atomic_long_cmpxchg(&b->max_boost_expires, curr_expires,
 				     new_expires) != curr_expires);
 
+    //pr_err("set max boost %d",duration_ms);
 	set_bit(MAX_BOOST, &b->state);
 	if (!mod_delayed_work(system_unbound_wq, &b->max_unboost,
 			      boost_jiffies))
@@ -176,13 +216,15 @@ static void devfreq_update_boosts(struct boost_dev *b, unsigned long state)
 
 	mutex_lock(&df->lock);
 	if (test_bit(SCREEN_OFF, &state)) {
-		df->min_freq = df->profile->freq_table[0];
+		//df->min_freq = df->profile->freq_table[0];
 		df->max_boost = false;
+        //pr_err("Disable boost, SCREEN_OFF");
 	} else {
-		df->min_freq = test_bit(INPUT_BOOST, &state) ?
-			       min(b->boost_freq, df->max_freq) :
-			       df->profile->freq_table[0];
+		//df->min_freq = test_bit(INPUT_BOOST, &state) ?
+		//	       min(b->boost_freq, df->max_freq) :
+		//	       df->profile->freq_table[0];
 		df->max_boost = test_bit(MAX_BOOST, &state);
+        //pr_err("Update max boost:%d,%d",df->min_freq,df->max_boost);
 	}
 	update_devfreq(df);
 	mutex_unlock(&df->lock);
