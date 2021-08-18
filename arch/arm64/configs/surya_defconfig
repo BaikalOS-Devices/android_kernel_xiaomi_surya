@@ -2,6 +2,10 @@
 # Automatically generated file; DO NOT EDIT.
 # Linux/arm64 4.14.190 Kernel Configuration
 #
+
+# BaikalOS specific
+CONFIG_BAIKALOS_WL_BLOCKER=y
+#
 CONFIG_ARM64=y
 CONFIG_64BIT=y
 CONFIG_ARCH_PHYS_ADDR_T_64BIT=y
@@ -1482,9 +1486,9 @@ CONFIG_BLK_DEV_RAM_SIZE=8192
 # CONFIG_ATA_OVER_ETH is not set
 # CONFIG_BLK_DEV_RBD is not set
 # CONFIG_BLK_DEV_RSXX is not set
-CONFIG_VBSWAP=y
-CONFIG_VBSWAP_HELPER=y
-CONFIG_VBSWAP_DISKSIZE=4
+# CONFIG_VBSWAP is not set
+# CONFIG_VBSWAP_HELPER is not set
+# CONFIG_VBSWAP_DISKSIZE is not set
 # CONFIG_BLK_DEV_NVME is not set
 # CONFIG_NVME_FC is not set
 # CONFIG_NVME_TARGET is not set
@@ -5238,7 +5242,7 @@ CONFIG_SENSORS_SSC=y
 #
 # Qualcomm RmNet extensions
 #
-CONFIG_RMNET_PERF=y
+# CONFIG_RMNET_PERF=y
 CONFIG_RMNET_SHS=y
 
 #
