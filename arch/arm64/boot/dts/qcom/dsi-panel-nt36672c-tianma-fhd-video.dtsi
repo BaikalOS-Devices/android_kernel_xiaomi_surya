@@ -51,7 +51,7 @@
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-dsi-post-init-delay = <1>;
-		qcom,mdss-dsi-qsync-min-refresh-rate = <30>;
+		//qcom,mdss-dsi-qsync-min-refresh-rate = <30>;
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-enable-smart-fps;
 		qcom,mdss-dsi-pan-fps-update =
@@ -311,6 +311,20 @@
 
 					15 01 00 00 00 00 02 FF 10
 					15 01 00 00 00 00 02 FB 01
+
+                    // Turn HBM on
+					15 01 00 00 00 00 02 FF 10
+					15 01 00 00 00 00 02 FB 01
+					15 01 00 00 00 00 02 53 2C
+					15 01 00 00 00 00 02 51 FF
+
+
+                    // Turn CABC UI on
+ 				    15 01 00 00 00 00 02 FF 10
+					15 01 00 00 00 00 02 FB 01
+					15 01 00 00 00 00 02 53 2C
+					15 01 00 00 14 00 02 55 01
+
 				];
 				qcom,mdss-dsi-off-command = [
 					15 01 00 00 00 00 02 FF 10
