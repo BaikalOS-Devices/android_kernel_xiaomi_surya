@@ -1572,6 +1572,9 @@ static void cpuset_attach(struct cgroup_taskset *tset)
 		 */
 		WARN_ON_ONCE(update_cpus_allowed(cs, task, cpus_attach));
 
+		//if (!strncmp(name_buf, "background", 10))
+		//	set_user_nice(task, 10);
+
 		cpuset_change_task_nodemask(task, &cpuset_attach_nodemask_to);
 		cpuset_update_task_spread_flag(cs, task);
 	}
