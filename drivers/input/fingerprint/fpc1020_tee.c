@@ -506,7 +506,7 @@ static const struct attribute_group attribute_group = {
 static void notification_work(struct work_struct *work)
 {
 	pr_debug("fpc %s:unblank\n", __func__);
-	dsi_bridge_interface_enable(FP_UNLOCK_REJECTION_TIMEOUT);
+	//dsi_bridge_interface_enable(FP_UNLOCK_REJECTION_TIMEOUT);
  }
 
 static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
@@ -516,7 +516,8 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 	dev_dbg(fpc1020->dev, "%s\n", __func__);
 
 	if (atomic_read(&fpc1020->wakeup_enabled)) {
-		__pm_wakeup_event(&fpc1020->ttw_ws, FPC_TTW_HOLD_TIME);
+		//__pm_wakeup_event(&fpc1020->ttw_ws, FPC_TTW_HOLD_TIME);
+        pm_wakeup_ws_event(&fpc1020->ttw_ws, FPC_TTW_HOLD_TIME, true);
 	}
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
