@@ -629,9 +629,9 @@ static void pm_suspend_marker(char *annotation)
 
 	getnstimeofday(&ts);
 	rtc_time_to_tm(ts.tv_sec, &tm);
-	//pr_info("PM: suspend %s %d-%02d-%02d %02d:%02d:%02d.%09lu UTC\n",
-	//	annotation, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-	//	tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+	pr_info("PM: suspend %s %d-%02d-%02d %02d:%02d:%02d.%09lu UTC\n",
+		annotation, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+		tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
 }
 
 /**
@@ -648,7 +648,6 @@ int pm_suspend(suspend_state_t state)
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
 		return -EINVAL;
 
-	pr_debug("suspend entry (%s)\n", mem_sleep_labels[state]);
 	pm_suspend_marker("entry");
     pm_suspend_stats(true);
 	error = enter_state(state);
@@ -661,7 +660,6 @@ int pm_suspend(suspend_state_t state)
     pm_suspend_stats(false);
 	pm_suspend_marker("exit");
 	measure_wake_up_time();
-	pr_debug("suspend exit\n");
 	return error;
 }
 EXPORT_SYMBOL(pm_suspend);
