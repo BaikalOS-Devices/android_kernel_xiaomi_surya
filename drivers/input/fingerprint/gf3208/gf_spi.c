@@ -346,6 +346,8 @@ static irqreturn_t gf_irq(int irq, void *handle)
 #if defined(GF_NETLINK_ENABLE)
 	char msg[2] =  { 0x0 };
 	struct gf_dev *gf_dev = &gf;
+	//__pm_wakeup_event(&fp_ws, 1000);
+    pm_wakeup_ws_event(&fp_ws, 2000, true);
 	msg[0] = GF_NET_EVENT_IRQ;
 	sendnlmsg(msg);
 	if (gf_dev->device_available == 1) {
