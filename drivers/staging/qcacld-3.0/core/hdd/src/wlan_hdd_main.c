@@ -2589,6 +2589,7 @@ static void hdd_mon_mode_ether_setup(struct net_device *dev)
  */
 static void hdd_mon_turn_off_ps_and_wow(struct hdd_context *hdd_ctx)
 {
+    pr_err("FEATURE_MONITOR_MODE_SUPPORT disable wow");
 	ucfg_pmo_set_power_save_mode(hdd_ctx->psoc,
 				     PMO_PS_ADVANCED_POWER_SAVE_DISABLE);
 	ucfg_pmo_set_wow_enable(hdd_ctx->psoc, PMO_WOW_DISABLE_BOTH);
@@ -16824,6 +16825,7 @@ static int hdd_update_pmo_config(struct hdd_context *hdd_ctx)
 	 *     all interfaces.
 	 */
 	wow_enable = ucfg_pmo_get_wow_enable(hdd_ctx->psoc);
+    pr_err("wow_enable = %d", (int)wow_enable);
 	psoc_cfg.magic_ptrn_enable = (wow_enable & 0x01) ? true : false;
 	psoc_cfg.ptrn_match_enable_all_vdev =
 				(wow_enable & 0x02) ? true : false;

@@ -536,6 +536,8 @@ ucfg_pmo_set_wow_enable(struct wlan_objmgr_psoc *psoc,
 {
 	struct pmo_psoc_priv_obj *pmo_psoc_ctx = pmo_psoc_get_priv(psoc);
 
+    pr_err("wow enable = %d",(int)val);
+    dump_stack();
 	pmo_psoc_ctx->psoc_cfg.wow_enable = val;
 }
 

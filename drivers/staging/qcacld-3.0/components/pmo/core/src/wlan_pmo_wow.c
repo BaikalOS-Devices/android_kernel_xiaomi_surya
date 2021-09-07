@@ -307,6 +307,7 @@ bool pmo_core_is_wow_applicable(struct wlan_objmgr_psoc *psoc)
 
 	if (pmo_support_wow_for_beaconing(psoc)) {
 		pmo_debug("one of vdev is in beaconning mode, enabling wow");
+		pr_err("one of vdev is in beaconning mode, enabling wow");
 		return true;
 	}
 
@@ -355,8 +356,10 @@ bool pmo_core_is_wow_applicable(struct wlan_objmgr_psoc *psoc)
 
 		pmo_vdev_put_ref(vdev);
 
-		if (is_wow_applicable)
+		if (is_wow_applicable) {
+            pr_err("is_wow_applicable =  true");
 			return true;
+        }
 	}
 
 	pmo_debug("All vdev are in disconnected state\n"
