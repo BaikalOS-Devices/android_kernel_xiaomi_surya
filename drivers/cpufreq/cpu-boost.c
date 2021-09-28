@@ -90,7 +90,9 @@ check_enable:
 			break;
 		}
 	}
-	input_boost_enabled = enabled;
+	//input_boost_enabled = enabled;
+
+	input_boost_enabled = false;
 
 	return 0;
 }
