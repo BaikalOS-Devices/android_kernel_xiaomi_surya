@@ -8269,8 +8269,8 @@ static int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
 {
 	struct task_group *tg;
 
-	if (boosted > 1)
-		return -EINVAL;
+	if (boosted > 1) boosted = 1;
+		//return -EINVAL;
 	tg = css_tg(css);
 	tg->boosted = (unsigned int) boosted;
 
