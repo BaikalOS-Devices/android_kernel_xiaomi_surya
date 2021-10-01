@@ -4469,8 +4469,8 @@ int dsi_panel_apply_cabc_mode(struct dsi_panel *panel)
 	static const enum dsi_cmd_set_type type_map[] = {
 		DSI_CMD_SET_DISP_CABC_OFF,
 		DSI_CMD_SET_DISP_CABC_UI_ON,
-		DSI_CMD_SET_DISP_CABC_STILL_ON,
-		DSI_CMD_SET_DISP_CABC_MOVIE_ON
+		DSI_CMD_SET_DISP_CABC_MOVIE_ON,
+		DSI_CMD_SET_DISP_CABC_STILL_ON
 	};
 
 	enum dsi_cmd_set_type type;
