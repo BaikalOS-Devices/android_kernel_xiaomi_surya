@@ -973,10 +973,10 @@ uclamp_tg_restrict(struct task_struct *p, enum uclamp_id clamp_id)
 	 * Tasks in autogroups or root task group will be
 	 * restricted by system defaults.
 	 */
-	if (task_group_is_autogroup(task_group(p)))
+	/*if (task_group_is_autogroup(task_group(p)))
 		return uc_req;
 	if (task_group(p) == &root_task_group)
-		return uc_req;
+		return uc_req;*/
 
 	uc_max = task_group(p)->uclamp[clamp_id];
 	if (uc_req.value > uc_max.value || !uc_req.user_defined)
