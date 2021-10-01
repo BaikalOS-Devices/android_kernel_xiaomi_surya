@@ -804,7 +804,7 @@
 };
 
 &dsi_nt36672c_huaxing_fhd_video {
-	qcom,esd-err-int-gpio = <&tlmm 4 0>;
+	//qcom,esd-err-int-gpio = <&tlmm 4 0>;
 	qcom,mdss-dsi-t-clk-post = <0x04>;
 	qcom,mdss-dsi-t-clk-pre = <0x26>;
 	qcom,dsi-supported-dfps-list = <120 90 60 50 30>;
@@ -821,7 +821,7 @@
 };
 
 &dsi_nt36672c_tianma_fhd_video {
-	qcom,esd-err-int-gpio = <&tlmm 4 0>;
+	//qcom,esd-err-int-gpio = <&tlmm 4 0>;
 	qcom,mdss-dsi-t-clk-post = <0x04>;
 	qcom,mdss-dsi-t-clk-pre = <0x26>;
 	qcom,dsi-supported-dfps-list = <120 90 60 50 30>;
