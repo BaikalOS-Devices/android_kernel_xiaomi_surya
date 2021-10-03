@@ -6918,20 +6918,21 @@ boosted_cpu_util(int cpu, struct sched_walt_cpu_load *walt_load)
 static inline unsigned long
 boosted_task_util(struct task_struct *task)
 {
-#ifdef CONFIG_UCLAMP_TASK_GROUP
 	unsigned long util = task_util_est(task);
+	unsigned long r_util = util;
+#ifdef CONFIG_UCLAMP_TASK_GROUP
 	unsigned long util_min = uclamp_eff_value(task, UCLAMP_MIN);
 	unsigned long util_max = uclamp_eff_value(task, UCLAMP_MAX);
 
-	return clamp(util, util_min, util_max);
-#else
-	unsigned long util = task_util_est(task);
+	util = clamp(util, util_min, util_max);
+#endif
 	long margin = schedtune_task_margin(task);
 
 	trace_sched_boost_task(task, util, margin);
 
+    //pr_info("r_util=%d, util=%d, margin=%d", r_util, util, margin);
+
 	return util + margin;
-#endif
 }
 
 static unsigned long cpu_util_without(int cpu, struct task_struct *p);
