@@ -3785,6 +3785,7 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 		usbpd_info(&pd->dev, "Type-C Sink%s connected\n",
 				typec_mode == POWER_SUPPLY_TYPEC_SINK ?
 					"" : " (powered)");
+        dump_stack();
 
 		if (pd->current_pr == PR_SRC)
 			return 0;

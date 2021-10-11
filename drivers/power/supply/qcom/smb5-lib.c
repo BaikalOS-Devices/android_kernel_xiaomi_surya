@@ -7344,6 +7344,9 @@ static void typec_sink_insertion(struct smb_charger *chg)
 	if (rc < 0)
 		dev_err(chg->dev, "Error in setting freq_boost rc=%d\n", rc);
 
+
+	dev_err(chg->dev, "typec_sink_insertion Type-C extcon=%d\n", chg->use_extcon);
+
 	if (chg->use_extcon) {
 		smblib_notify_usb_host(chg, true);
 		chg->otg_present = true;
@@ -7358,6 +7361,8 @@ static void typec_src_insertion(struct smb_charger *chg)
 {
 	int rc = 0;
 	u8 stat;
+
+	dev_err(chg->dev, "typec_src_insertion Type-C\n");
 
 	if (chg->pr_swap_in_progress) {
 		vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, false, 0);
@@ -8630,17 +8635,25 @@ static void smblib_uusb_otg_work(struct work_struct *work)
 	u8 stat;
 	bool otg;
 
+
+
 	rc = smblib_read(chg, TYPEC_U_USB_STATUS_REG, &stat);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read TYPE_C_STATUS_3 rc=%d\n", rc);
 		goto out;
 	}
 	otg = !!(stat & U_USB_GROUND_NOVBUS_BIT);
+
+	dev_err(chg->dev, "smblib_uusb_otg_work Type-C otg=%d, stat=%X\n", otg,stat);
+
 	if (chg->otg_present != otg)
 		smblib_notify_usb_host(chg, otg);
 	else
 		goto out;
 
+
+    dev_err(chg->dev, "usb_otg =%d\n", otg);
+    dump_stack();
 	chg->otg_present = otg;
 	if (!otg)
 		chg->boost_current_ua = 0;

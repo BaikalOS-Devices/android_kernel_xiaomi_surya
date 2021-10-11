@@ -193,7 +193,7 @@ void thermal_zone_set_trips(struct thermal_zone_device *tz)
 	tz->prev_low_trip = low;
 	tz->prev_high_trip = high;
 
-	dev_dbg(&tz->device,
+	dev_info(&tz->device,
 		"new temperature boundaries: %d < x < %d\n", low, high);
 
 	/*

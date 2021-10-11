@@ -711,47 +711,67 @@ static int smb5_parse_dt(struct smb5 *chip)
 
 	/* Extract ADC channels */
 	rc = smblib_get_iio_channel(chg, "mid_voltage", &chg->iio.mid_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("mid_voltage is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "usb_in_voltage",
 					&chg->iio.usbin_v_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("usb_in_voltage is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "chg_temp", &chg->iio.temp_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("usb_in_voltage is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "usb_in_current",
 					&chg->iio.usbin_i_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("usb_in_current is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "sbux_res", &chg->iio.sbux_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("sbux_res is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "vph_voltage", &chg->iio.vph_v_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("vph_voltage is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "die_temp", &chg->iio.die_temp_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("die_temp is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "conn_temp",
 					&chg->iio.connector_temp_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("conn_temp is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "skin_temp", &chg->iio.skin_temp_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("skin_temp is incorrect\n");
 		return rc;
+    }
 
 	rc = smblib_get_iio_channel(chg, "smb_temp", &chg->iio.smb_temp_chan);
-	if (rc < 0)
+	if (rc < 0) {
+		pr_err("smb_temp is incorrect\n");
 		return rc;
+    }
 
 	chip->dt.disable_suspend_on_collapse = of_property_read_bool(node,
 					"qcom,disable-suspend-on-collapse");
