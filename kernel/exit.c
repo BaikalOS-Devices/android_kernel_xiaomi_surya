@@ -415,8 +415,8 @@ assign_new_owner:
 		put_task_struct(c);
 		goto retry;
 	}
-	WRITE_ONCE(mm->owner, c);
-	task_unlock(c);
+	mm->owner = c;
+	lru_gen_migrate_mm(mm);
 	put_task_struct(c);
 }
 #endif /* CONFIG_MEMCG */
