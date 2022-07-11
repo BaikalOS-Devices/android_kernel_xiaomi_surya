@@ -618,7 +618,11 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 {
 
 #ifdef CONFIG_BAIKALOS_WL_BLOCKER
-    if( is_wakelock_disabled(ws) ) return;
+    if( is_wakelock_disabled(ws) ) { 
+        //pr_info("wakesource disabled: %s\n", ws->name);
+        //dump_stack();
+        return;
+    }
 #endif
 
 	ws->event_count++;
@@ -635,6 +639,8 @@ static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 
 	if (hard)
 		pm_system_wakeup();
+    //else
+    //    pr_info("Wakesource active, but not wakeup: %s\n", ws->name);
 }
 
 /**
@@ -1240,6 +1246,7 @@ static int __init wakeup_sources_debugfs_init(void)
 	wakeup_sources_stats_dentry = debugfs_create_file("wakeup_sources",
 			S_IRUGO, NULL, NULL, &wakeup_sources_stats_fops);
 	debugfs_create_file("trace_marker", 0220, debugfs_create_dir("tracing", NULL), NULL, NULL);
+    debugfs_create_dir("events",debugfs_create_dir("tracing", NULL));
 	return 0;
 }
 
