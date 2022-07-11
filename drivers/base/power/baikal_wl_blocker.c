@@ -39,8 +39,7 @@ module_param(active, bool, 0664);
 
 const char *ws_list_eq[] = {
     "hal_bluetooth_lock",
-    "NETLINK",
-    "DIAG_WS",
+    //"[timerfd]",
     NULL
 };
 
@@ -54,7 +53,7 @@ const char *ws_list_starts_with[] = {
 };
 
 const char *ws_list_forced_eq[] = {
-    "qcom_rx_wakelock",
+    /*"qcom_rx_wakelock",*/
     NULL
 };
 
