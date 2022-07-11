@@ -860,7 +860,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 {
 	union power_supply_propval pval = {0,};
 	int rc = 0;
-	int termi = -220;
+	int termi = -200;
 
 	if (!chg->bms_psy)
 		return 0;
@@ -877,7 +877,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 #endif
 
 	/*if soc > 90 do not set fastcharge flag*/
-	rc = power_supply_get_property(chg->bms_psy,
+	/*rc = power_supply_get_property(chg->bms_psy,
 			POWER_SUPPLY_PROP_CAPACITY, &pval);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't get bms capacity:%d\n", rc);
@@ -888,9 +888,9 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 		smblib_dbg(chg, PR_MISC, "soc:%d is more than 90"
 			"do not setfastcharge mode\n", pval.intval);
 		enable = false;
-	}
+	}*/
 	/*if temp > 480 or temp < 150 do not set fastcharge flag*/
-	rc = power_supply_get_property(chg->bms_psy,
+	/*rc = power_supply_get_property(chg->bms_psy,
 					POWER_SUPPLY_PROP_TEMP, &pval);
 	if (rc < 0) {
 			smblib_err(chg, "Couldn't get bms capacity:%d\n", rc);
@@ -901,7 +901,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 			smblib_dbg(chg, PR_MISC, "temp:%d is abort"
 							"do not setfastcharge mode\n", pval.intval);
 			enable = false;
-	}
+	}*/
 
 	pval.intval = enable;
 	rc = power_supply_set_property(chg->bms_psy,
@@ -2619,10 +2619,10 @@ int smblib_get_prop_batt_charge_done(struct smb_charger *chg,
 		/*disable FFC when charge done*/
 		if (chg->support_ffc) {
 			smblib_dbg(chg, PR_OEM, "[%s] enter to set fastcharge mode, cap=%d\n", __func__, batt_capa.intval);
-			if ((smblib_get_fastcharge_mode(chg) == 1) && (batt_capa.intval > 90)) {
+			/*if ((smblib_get_fastcharge_mode(chg) == 1) && (batt_capa.intval > 90)) {
 				rc = smblib_set_fastcharge_mode(chg, false);
 				smblib_dbg(chg, PR_OEM, "[%s] set_fastcharge_mode to false!\n", __func__);
-			}
+			}*/
 		}
 		vote(chg->awake_votable, CHG_AWAKE_VOTER, false, 0);
 	}
