@@ -17,7 +17,7 @@ config DIAG_OVER_USB
 	bool "Enable DIAG traffic to go over USB"
 	depends on DIAG_CHAR
 	depends on ARCH_QCOM
-	default y
+	default n
 	help
 	  Diag over USB enables sending DIAG traffic over a USB transport. When
 	  the USB endpoints become available, the DIAG driver will enable Diag
@@ -28,7 +28,7 @@ config DIAGFWD_BRIDGE_CODE
 	bool "Enable remote DIAG traffic over MHI/HSIC"
 	depends on DIAG_CHAR
 	depends on USB_QTI_DIAG_BRIDGE || MHI_BUS
-	default y
+	default n
 	help
 	  MHI/HSIC Transport Layer for DIAG Router. When the MHI/HSIC endpoints
 	  become available, this bridge driver enables DIAG traffic over MHI
