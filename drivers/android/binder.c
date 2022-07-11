@@ -2538,13 +2538,13 @@ static int binder_proc_transaction(struct binder_transaction *t,
 			(thread && thread->is_dead)) {
 		binder_inner_proc_unlock(proc);
 		binder_node_unlock(node);
-        if( proc->is_frozen ) pr_warn("frozen process transaction ignored %d, %d", proc->pid, oneway);
+        //if( proc->is_frozen ) pr_warn("frozen process transaction ignored %d, %d", proc->pid, oneway);
 		return proc->is_frozen ? BR_FROZEN_REPLY : BR_DEAD_REPLY;
 	}
 
-    if( proc->is_frozen ) {
-        pr_warn("frozen process transaction passed %d, %d", proc->pid, oneway);    
-    }
+    //if( proc->is_frozen ) {
+    //     pr_warn("frozen process transaction passed %d, %d", proc->pid, oneway);    
+    //}
 
 	if (!thread && !pending_async)
 		thread = binder_select_thread_ilocked(proc);
