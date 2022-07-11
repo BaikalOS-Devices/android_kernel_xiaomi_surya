@@ -797,11 +797,20 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->disp_thread[i].crtc_id = priv->crtcs[i]->base.id;
 		kthread_init_worker(&priv->disp_thread[i].worker);
 		priv->disp_thread[i].dev = ddev;
-		priv->disp_thread[i].thread =
-			kthread_run_perf_critical(cpu_perf_mask,
-				kthread_worker_fn,
-				&priv->disp_thread[i].worker,
-				"crtc_commit:%d", priv->disp_thread[i].crtc_id);
+
+        if( i == 0 ) {
+    		priv->disp_thread[i].thread =
+	    		kthread_run_perf_critical(cpu_perf_mask,
+		    		kthread_worker_fn,
+			    	&priv->disp_thread[i].worker,
+				    "crtc_commit:%d", priv->disp_thread[i].crtc_id);
+        } else {
+    		priv->disp_thread[i].thread =
+	    		kthread_run(kthread_worker_fn,
+			    	&priv->disp_thread[i].worker,
+				    "crtc_commit:%d", priv->disp_thread[i].crtc_id);
+        }
+
 		ret = sched_setscheduler(priv->disp_thread[i].thread,
 							SCHED_FIFO, &param);
 		if (ret)
@@ -817,11 +826,20 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->event_thread[i].crtc_id = priv->crtcs[i]->base.id;
 		kthread_init_worker(&priv->event_thread[i].worker);
 		priv->event_thread[i].dev = ddev;
-		priv->event_thread[i].thread =
-			kthread_run_perf_critical(cpu_perf_mask,
-				kthread_worker_fn,
-				&priv->event_thread[i].worker,
-				"crtc_event:%d", priv->event_thread[i].crtc_id);
+
+        if( i == 0 ) {
+		    priv->event_thread[i].thread =
+			    kthread_run_perf_critical(cpu_perf_mask,
+    				kthread_worker_fn,
+    				&priv->event_thread[i].worker,
+    				"crtc_event:%d", priv->event_thread[i].crtc_id);
+        } else {
+		    priv->event_thread[i].thread =
+			    kthread_run(kthread_worker_fn,
+    				&priv->event_thread[i].worker,
+    				"crtc_event:%d", priv->event_thread[i].crtc_id);
+        }
+         
 		/**
 		 * event thread should also run at same priority as disp_thread
 		 * because it is handling frame_done events. A lower priority
@@ -870,7 +888,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 			kthread_worker_fn, &priv->pp_event_worker, "pp_event");
 
 	ret = sched_setscheduler(priv->pp_event_thread,
-						SCHED_FIFO, &param);
+						SCHED_RR, &param);
 	if (ret)
 		pr_warn("pp_event thread priority update failed: %d\n",
 								ret);
