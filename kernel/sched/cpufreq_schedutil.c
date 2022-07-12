@@ -240,7 +240,7 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
         if (enable_perf_boost || policy->cpu <= 5)  {
             freq = ( (freq + (freq >> 2) + (freq * cpu_boost_freq)/10 ) * util ) / max;                                     
         } else {
-            freq = ( freq * util ) / max;
+            freq = (freq + (freq >> 2)) * util / max;
         }
     } else {
         freq = (freq + (freq >> 2)) * util / max;
@@ -382,6 +382,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	busy = use_pelt() && sugov_cpu_is_busy(sg_cpu);
 
 	if (flags & SCHED_CPUFREQ_RT_DL) {
+		sg_policy->cached_raw_freq = 0;
 		next_f = policy->cpuinfo.max_freq;
 	} else {
 		sugov_get_util(&util, &max, sg_cpu->cpu, time);
@@ -874,7 +875,7 @@ static int sugov_start(struct cpufreq_policy *policy)
 		memset(sg_cpu, 0, sizeof(*sg_cpu));
 		sg_cpu->cpu = cpu;
 		sg_cpu->sg_policy = sg_policy;
-		sg_cpu->flags = SCHED_CPUFREQ_RT;
+		sg_cpu->flags = SCHED_CPUFREQ_DL;
 		sg_cpu->iowait_boost_max = policy->cpuinfo.max_freq;
 	}
 

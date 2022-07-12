@@ -51,7 +51,7 @@ SCHED_FEAT(WAKEUP_PREEMPTION, true)
 
 SCHED_FEAT(HRTICK, false)
 SCHED_FEAT(DOUBLE_TICK, false)
-SCHED_FEAT(LB_BIAS, false)
+SCHED_FEAT(LB_BIAS, true)
 
 /*
  * Decrement CPU capacity based on time not spent running tasks
@@ -148,4 +148,4 @@ SCHED_FEAT(SCHEDTUNE_BOOST_HOLD_ALL, false)
  * generally leads to usage of higher frequencies.
  * If disabled, boosts will only bias tasks to higher-capacity CPUs.
  */
-SCHED_FEAT(SCHEDTUNE_BOOST_UTIL, false)
+SCHED_FEAT(SCHEDTUNE_BOOST_UTIL, true)
