@@ -80,6 +80,7 @@ static DEFINE_RWLOCK(binfmt_lock);
 #define HWCOMPOSER_BIN_PREFIX "/vendor/bin/hw/android.hardware.graphics.composer"
 #define HWDISPLAY_BIN_PREFIX "/vendor/bin/hw/vendor.qti.hardware.display"
 #define SFLINGER_BIN_PREFIX "/system/bin/surfaceflinger"
+#define AUDIOSRVS_BIN_PREFIX "/vendor/bin/hw/android.hardware.audio.service"
 
 void __register_binfmt(struct linux_binfmt * fmt, int insert)
 {
@@ -1823,18 +1824,28 @@ static int do_execveat_common(int fd, struct filename *filename,
 		goto out;
 
 	if (is_global_init(current->parent)) {
-		if (unlikely(!strncmp(filename->name,
+		/*if (unlikely(!strncmp(filename->name,
 					   HWDISPLAY_BIN_PREFIX,
 					   strlen(HWDISPLAY_BIN_PREFIX)))) {
 			current->flags |= PF_PERF_CRITICAL;
-			set_cpus_allowed_ptr(current, cpu_perf_mask);
+			//set_cpus_allowed_ptr(current, cpu_perf_mask);
+            set_cpus_allowed_ptr(current, cpu_all_mask);
 		} else if (unlikely(!strncmp(filename->name,
 			           HWCOMPOSER_BIN_PREFIX,
 					   strlen(HWCOMPOSER_BIN_PREFIX)))) {
 			current->flags |= PF_PERF_CRITICAL;
-			set_cpus_allowed_ptr(current, cpu_perf_mask);
+			//set_cpus_allowed_ptr(current, cpu_perf_mask);
+            set_cpus_allowed_ptr(current, cpu_all_mask);
+		} else */ if (unlikely(!strncmp(filename->name,
+			           AUDIOSRVS_BIN_PREFIX,
+					   strlen(AUDIOSRVS_BIN_PREFIX)))) {
+			current->flags |= PF_PERF_CRITICAL;
+			//set_cpus_allowed_ptr(current, cpu_perf_mask);
+            set_cpus_allowed_ptr(current, cpu_all_mask);
 		}
 	} 
+
+
 
 	/* execve succeeded */
 	current->fs->in_exec = 0;
