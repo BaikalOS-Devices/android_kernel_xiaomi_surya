@@ -90,7 +90,7 @@ static inline struct schedtune *parent_st(struct schedtune *st)
 static struct schedtune root_schedtune = {
 	.boost = 0,
 #ifdef CONFIG_SCHED_WALT
-	.sched_boost_no_override = false,
+	.sched_boost_no_override = true,
 	.sched_boost_enabled = true,
 	.colocate = false,
 	.colocate_update_disabled = false,
@@ -554,14 +554,18 @@ int schedtune_task_boost(struct task_struct *p)
 	struct schedtune *st;
 	int task_boost;
 
-	if (unlikely(!schedtune_initialized) /*|| unlikely(is_battery_saver_on())*/)
+	if (unlikely(!schedtune_initialized))
 		return 0;
+
 
 	/* Get task boost value */
 	rcu_read_lock();
 	st = task_schedtune(p);
 	task_boost = st->boost;
 	rcu_read_unlock();
+
+    if( (p->prio > DEFAULT_PRIO || unlikely(is_battery_saver_on()) ) && task_boost > 0 ) return 0;
+
 
 	return task_boost;
 }
@@ -571,7 +575,7 @@ int schedtune_prefer_idle(struct task_struct *p)
 	struct schedtune *st;
 	int prefer_idle;
 
-	if (unlikely(!schedtune_initialized) /*|| unlikely(is_battery_saver_on())*/)
+	if (unlikely(!schedtune_initialized) || unlikely(is_battery_saver_on()))
 		return 0;
 
 	/* Get prefer_idle value */
@@ -660,7 +664,7 @@ int schedtune_prefer_high_cap(struct task_struct *p)
 	struct schedtune *st;
 	int prefer_high_cap;
 
-	if (unlikely(!schedtune_initialized))
+	if (unlikely(!schedtune_initialized) || unlikely(is_battery_saver_on()))
 		return 0;
 
     if( p->prio > DEFAULT_PRIO ) return 0;
