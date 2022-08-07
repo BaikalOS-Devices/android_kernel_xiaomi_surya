@@ -544,6 +544,11 @@ struct cpu_cycle_counter_cb {
 
 extern DEFINE_PER_CPU_READ_MOSTLY(int, sched_load_boost);
 
+extern DEFINE_PER_CPU(int, sched_cur_util_boosted);
+extern DEFINE_PER_CPU(int, sched_cur_util);
+extern DEFINE_PER_CPU(int, sched_cur_load);
+extern DEFINE_PER_CPU(int, sched_cur_capacity);
+
 #ifdef CONFIG_SCHED_WALT
 extern void sched_exit(struct task_struct *p);
 extern int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb);
