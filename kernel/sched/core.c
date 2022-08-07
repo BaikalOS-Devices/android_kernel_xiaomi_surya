@@ -3140,6 +3140,16 @@ DEFINE_PER_CPU(struct kernel_cpustat, kernel_cpustat);
 EXPORT_PER_CPU_SYMBOL(kstat);
 EXPORT_PER_CPU_SYMBOL(kernel_cpustat);
 
+DEFINE_PER_CPU(int, sched_cur_util_boosted);
+DEFINE_PER_CPU(int, sched_cur_util);
+DEFINE_PER_CPU(int, sched_cur_load);
+DEFINE_PER_CPU(int, sched_cur_capacity);
+
+EXPORT_PER_CPU_SYMBOL(sched_cur_util);
+EXPORT_PER_CPU_SYMBOL(sched_cur_load);
+EXPORT_PER_CPU_SYMBOL(sched_cur_capacity);
+
+
 /*
  * The function fair_sched_class.update_curr accesses the struct curr
  * and its field curr->exec_start; when called from task_sched_runtime(),
@@ -4209,18 +4219,13 @@ static void __setscheduler_params(struct task_struct *p,
     int nice = attr->sched_nice;
     int org_policy;
 
+    //pr_info("__setscheduler_params %d policy=%X prio=%d nice=%d", p->pid, policy, prio, nice);
 
 	if (policy == SETPARAM_POLICY)
 		policy = p->policy;
-	else
-		policy &= ~SCHED_RESET_ON_FORK;
 
-    org_policy = policy;
-
-    //pr_info("__setscheduler_params %d policy=%X prio=%d nice=%d", p->pid, policy, prio, nice);
-
-    //p->policy = policy == SCHED_FIFO ? SCHED_RR : policy;
-    p->policy = policy;
+    p->policy = policy == SCHED_FIFO ? SCHED_RR : policy;
+    //p->policy = policy;
 
 	if (dl_policy(policy))
 		__setparam_dl(p, attr);

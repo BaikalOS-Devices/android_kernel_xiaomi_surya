@@ -267,12 +267,15 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu,
 			   u64 time)
 {
 	struct rq *rq = cpu_rq(cpu);
-	unsigned long max_cap, rt;
+	unsigned long max_cap, rt, cur_util;
 	struct sugov_cpu *loadcpu = &per_cpu(sugov_cpu, cpu);
 	s64 delta;
 
+
 	max_cap = arch_scale_cpu_capacity(NULL, cpu);
 	*max = max_cap;
+
+    cur_util = cpu_util_freq(cpu, &loadcpu->walt_load);
 
 	*util = boosted_cpu_util(cpu, &loadcpu->walt_load);
 
@@ -289,6 +292,12 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu,
     if( unlikely(enable_util_debug) ) {
         pr_info("sugov_get_util (%d): util=%d, max_cap=%d", cpu, *util, max_cap);
     }
+
+
+    per_cpu(sched_cur_util_boosted, cpu) = *util;
+    per_cpu(sched_cur_util, cpu) = cur_util;
+    per_cpu(sched_cur_load, cpu) = (cur_util * 100) / max_cap;
+    per_cpu(sched_cur_capacity, cpu) = max_cap;
 
 }
 
