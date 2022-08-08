@@ -253,8 +253,79 @@ static DEVICE_ATTR(sched_load_boost, 0644,
 		   show_sched_load_boost,
 		   store_sched_load_boost);
 
+static ssize_t sched_cur_load_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t rc;
+	unsigned int cur_load;
+	struct cpu *cpu = container_of(dev, struct cpu, dev);
+	int cpuid = cpu->dev.id;
+
+	cur_load = per_cpu(sched_cur_load, cpuid);
+	rc = snprintf(buf, PAGE_SIZE-2, "%d\n", cur_load);
+
+	return rc;
+}
+
+static DEVICE_ATTR_RO(sched_cur_load);
+
+static ssize_t sched_cur_util_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t rc;
+	unsigned int cur_util;
+	struct cpu *cpu = container_of(dev, struct cpu, dev);
+	int cpuid = cpu->dev.id;
+
+	cur_util = per_cpu(sched_cur_util, cpuid);
+	rc = snprintf(buf, PAGE_SIZE-2, "%d\n", cur_util);
+
+	return rc;
+}
+
+
+static DEVICE_ATTR_RO(sched_cur_util);
+
+static ssize_t sched_cur_util_boosted_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t rc;
+	unsigned int cur_util_boosted;
+	struct cpu *cpu = container_of(dev, struct cpu, dev);
+	int cpuid = cpu->dev.id;
+
+	cur_util_boosted = per_cpu(sched_cur_util, cpuid);
+	rc = snprintf(buf, PAGE_SIZE-2, "%d\n", cur_util_boosted);
+
+	return rc;
+}
+
+
+static DEVICE_ATTR_RO(sched_cur_util_boosted);
+
+static ssize_t sched_cur_capacity_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	ssize_t rc;
+	unsigned int cur_capacity;
+	struct cpu *cpu = container_of(dev, struct cpu, dev);
+	int cpuid = cpu->dev.id;
+
+	cur_capacity = per_cpu(sched_cur_capacity, cpuid);
+	rc = snprintf(buf, PAGE_SIZE-2, "%d\n", cur_capacity);
+
+	return rc;
+}
+
+
+static DEVICE_ATTR_RO(sched_cur_capacity);
+
 static struct attribute *sched_cpu_attrs[] = {
 	&dev_attr_sched_load_boost.attr,
+	&dev_attr_sched_cur_load.attr,
+	&dev_attr_sched_cur_util.attr,
+	&dev_attr_sched_cur_util_boosted.attr,
+	&dev_attr_sched_cur_capacity.attr,
 	NULL
 };
 
