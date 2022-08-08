@@ -2250,7 +2250,7 @@ static int __drm_mode_atomic_ioctl(struct drm_device *dev, void *data,
 		return -EINVAL;
 
 	if (!(arg->flags & DRM_MODE_ATOMIC_TEST_ONLY))
-		devfreq_boost_kick(DEVFREQ_CPU_LLCC_DDR_BW);
+        devfreq_boost_kick_max(DEVFREQ_CPU_LLCC_DDR_BW, 16);
 
 	drm_modeset_acquire_init(&ctx, 0);
 
@@ -2388,7 +2388,7 @@ int drm_mode_atomic_ioctl(struct drm_device *dev, void *data,
 	 */
 	struct pm_qos_request req = {
 		.type = PM_QOS_REQ_AFFINE_CORES,
-		.cpus_affine = ATOMIC_INIT(BIT(raw_smp_processor_id()))
+		.cpus_affine = ATOMIC_INIT(BIT(raw_smp_processor_id()) | *cpumask_bits(cpu_perf_mask))
 	};
 	int ret;
 

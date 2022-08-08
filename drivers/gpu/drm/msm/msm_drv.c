@@ -812,7 +812,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
         }
 
 		ret = sched_setscheduler(priv->disp_thread[i].thread,
-							SCHED_FIFO, &param);
+							SCHED_RR, &param);
 		if (ret)
 			pr_warn("display thread priority update failed: %d\n",
 									ret);
@@ -914,6 +914,8 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 			goto fail;
 		}
 	}
+
+	irq_set_perf_affinity(platform_get_irq(pdev, 0), IRQF_PERF_AFFINE);
 
 	ret = drm_dev_register(ddev, 0);
 	if (ret)
