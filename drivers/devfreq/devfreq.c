@@ -88,8 +88,14 @@ static void devfreq_set_freq_limits(struct devfreq *devfreq)
 			max = devfreq->profile->freq_table[idx];
 	}
 
+    dev_info(devfreq->dev.parent, "devfreq_set_freq_limits: min_freq = %ld, max_freq = %ld\n", min, max);
+
 	devfreq->min_freq = min;
 	devfreq->max_freq = max;
+
+	devfreq->min_freq_set = min;
+	devfreq->max_freq_set = max;
+
 }
 
 /**
@@ -1136,8 +1142,8 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 	unsigned long max;
 
 	/* Minfreq is managed by devfreq_boost */
-	if (df->is_boost_device)
-		return count;
+	//if (df->is_boost_device)
+	//	return count;
 
 	ret = sscanf(buf, "%lu", &value);
 	if (ret != 1)
@@ -1147,11 +1153,16 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 	mutex_lock(&df->lock);
 	max = df->max_freq;
 	if (value && max && value > max) {
+        dev_info(dev, "min_freq_store: not set min_freq = %ld, %ld\n", value, max);
 		ret = -EINVAL;
 		goto unlock;
 	}
 
+    dev_info(dev, "min_freq_store: min_freq = %ld, max_freq = %ld\n", value, max);
+
 	df->min_freq = value;
+	df->min_freq_set = value;
+
 	update_devfreq(df);
 	ret = count;
 unlock:
@@ -1176,11 +1187,16 @@ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
 	mutex_lock(&df->lock);
 	min = df->min_freq;
 	if (value && min && value < min) {
+        dev_info(dev, "max_freq_store: not set max_freq = %ld, %ld\n", value, min);
 		ret = -EINVAL;
 		goto unlock;
 	}
 
+    dev_info(dev, "min_freq_store: min_freq = %ld, max_freq = %ld\n", min, value);
+
 	df->max_freq = value;
+	df->max_freq_set = value;
+
 	update_devfreq(df);
 	ret = count;
 unlock:

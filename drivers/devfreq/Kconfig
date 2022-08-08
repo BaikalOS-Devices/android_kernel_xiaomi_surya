@@ -284,7 +284,7 @@ config DEVFREQ_INPUT_BOOST_DURATION_MS
 
 config DEVFREQ_WAKE_BOOST_DURATION_MS
 	int "Wake boost duration"
-	default "1000"
+	default "3000"
 	help
 	  Wake boost duration in milliseconds for all boostable devices.
 

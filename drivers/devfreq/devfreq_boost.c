@@ -24,7 +24,6 @@ struct boost_dev {
 	struct delayed_work max_unboost;
 	wait_queue_head_t boost_waitq;
 	atomic_long_t max_boost_expires;
-	unsigned long boost_freq;
 	unsigned long state;
 };
 
@@ -37,7 +36,7 @@ struct df_boost_drv {
 static void devfreq_input_unboost(struct work_struct *work);
 static void devfreq_max_unboost(struct work_struct *work);
 
-#define BOOST_DEV_INIT(b, dev, freq) .devices[dev] = {				\
+#define BOOST_DEV_INIT(b, dev) .devices[dev] = {				\
 	.input_unboost =							\
 		__DELAYED_WORK_INITIALIZER((b).devices[dev].input_unboost,	\
 					   devfreq_input_unboost, 0),		\
@@ -45,15 +44,12 @@ static void devfreq_max_unboost(struct work_struct *work);
 		__DELAYED_WORK_INITIALIZER((b).devices[dev].max_unboost,	\
 					   devfreq_max_unboost, 0),		\
 	.boost_waitq =								\
-		__WAIT_QUEUE_HEAD_INITIALIZER((b).devices[dev].boost_waitq),	\
-	.boost_freq = freq							\
+		__WAIT_QUEUE_HEAD_INITIALIZER((b).devices[dev].boost_waitq) \
 }
 
 static struct df_boost_drv df_boost_drv_g __read_mostly = {
-	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_CPU_LLCC_DDR_BW,
-		       CONFIG_DEVFREQ_CPU_LLCC_DDR_BW_BOOST_FREQ),
-	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_CPU_CPU_LLCC_BW,
-		       CONFIG_DEVFREQ_CPU_CPU_LLCC_BW_BOOST_FREQ)
+	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_CPU_LLCC_DDR_BW),
+	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_CPU_CPU_LLCC_BW)
 };
 
 static void __devfreq_boost_kick(struct boost_dev *b)
@@ -157,11 +153,13 @@ static void devfreq_update_boosts(struct boost_dev *b, unsigned long state)
 	if (state & BIT(SCREEN_OFF)) {
 		df->min_freq = df->profile->freq_table[0];
 		df->max_boost = false;
+        //dev_info(df->dev.parent, "devfreq_update_boosts: min_freq = %ld, max_boost = %d (SCREEN_OFF)\n", df->min_freq, df->max_boost);
 	} else {
-		df->min_freq = state & BIT(INPUT_BOOST) ?
-			       min(b->boost_freq, df->max_freq) :
-			       df->profile->freq_table[0];
+		df->min_freq = state & BIT(INPUT_BOOST) || state & BIT(MAX_BOOST) ?
+			       min(df->max_freq_set, df->max_freq) :
+			       df->min_freq_set;
 		df->max_boost = state & BIT(MAX_BOOST);
+        //dev_info(df->dev.parent, "devfreq_update_boosts: min_freq = %ld, max_boost = %d\n", df->min_freq, df->max_boost);
 	}
 	update_devfreq(df);
 	mutex_unlock(&df->lock);

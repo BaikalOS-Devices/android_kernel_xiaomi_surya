@@ -152,8 +152,12 @@ struct devfreq {
 
 	void *data; /* private data for governors */
 
+	unsigned long min_freq_set; // default values to be used in boost logic
+	unsigned long max_freq_set;
+
 	unsigned long min_freq;
 	unsigned long max_freq;
+
 	bool is_boost_device;
 	bool max_boost;
 	bool stop_polling;

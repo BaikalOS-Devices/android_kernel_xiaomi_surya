@@ -501,6 +501,10 @@ out:
 	max_state = bus->devfreq->profile->max_state;
 	min_freq = (bus->devfreq->profile->freq_table[0] / 1000);
 	max_freq = (bus->devfreq->profile->freq_table[max_state - 1] / 1000);
+
+	min_freq_set = (bus->devfreq->profile->freq_table[0] / 1000);
+	max_freq_set = (bus->devfreq->profile->freq_table[max_state - 1] / 1000);
+
 	pr_info("exynos-bus: new bus device registered: %s (%6ld KHz ~ %6ld KHz)\n",
 			dev_name(dev), min_freq, max_freq);
 
