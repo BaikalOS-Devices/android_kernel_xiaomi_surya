@@ -8,7 +8,7 @@
 #include <linux/battery_saver.h>
 
 static bool __read_mostly enabled = false;
-module_param(enabled, bool, 0644);
+module_param(enabled, bool, 0664);
 
 // returns whether battery saver is enabled or disabled
 bool is_battery_saver_on(void)
