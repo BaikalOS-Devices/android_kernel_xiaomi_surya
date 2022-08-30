@@ -32,7 +32,7 @@
 #include <linux/irq_work.h>
 #include <linux/tick.h>
 #include <linux/slab.h>
-#include <linux/battery_saver.h>
+#include <linux/kernel_profile.h>
 
 #ifdef CONFIG_PARAVIRT
 #include <asm/paravirt.h>
@@ -1765,7 +1765,7 @@ extern void trigger_load_balance(struct rq *rq);
 
 extern void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_mask);
 
-bool __cpu_overutilized(int cpu, int delta);
+bool __cpu_overutilized(int cpu, int delta, int boosted);
 bool cpu_overutilized(int cpu);
 
 #endif
@@ -2882,7 +2882,7 @@ static inline enum sched_boost_policy sched_boost_policy(void)
 extern unsigned int sched_boost_type;
 static inline int sched_boost(void)
 {
-	return unlikely(is_battery_saver_on()) ? 0 : sched_boost_type;
+	return unlikely(kernel_profile() == KPROFILE_BATTERY) ? 0 : sched_boost_type;
 }
 
 extern int preferred_cluster(struct sched_cluster *cluster,
@@ -3141,3 +3141,13 @@ struct sched_avg_stats {
 	int nr_scaled;
 };
 extern void sched_get_nr_running_avg(struct sched_avg_stats *stats);
+
+#ifdef CONFIG_SMP
+static inline void sched_irq_work_queue(struct irq_work *work)
+{
+	if (likely(cpu_online(raw_smp_processor_id())))
+		irq_work_queue(work);
+	else
+		irq_work_queue_on(work, cpumask_any(cpu_online_mask));
+}
+#endif

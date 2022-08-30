@@ -5,7 +5,7 @@
 #include <linux/printk.h>
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
-#include <linux/battery_saver.h>
+#include <linux/kernel_profile.h>
 
 #include <trace/events/sched.h>
 
@@ -14,6 +14,9 @@
 
 bool schedtune_initialized = false;
 extern struct reciprocal_value schedtune_spc_rdiv;
+extern bool enable_boost_debug;
+extern bool enable_fbt_debug;
+
 
 /* We hold schedtune boost in effect for at least this long */
 #define SCHEDTUNE_BOOST_HOLD_NS 50000000ULL
@@ -90,7 +93,7 @@ static inline struct schedtune *parent_st(struct schedtune *st)
 static struct schedtune root_schedtune = {
 	.boost = 0,
 #ifdef CONFIG_SCHED_WALT
-	.sched_boost_no_override = true,
+	.sched_boost_no_override = false,
 	.sched_boost_enabled = true,
 	.colocate = false,
 	.colocate_update_disabled = false,
@@ -254,7 +257,7 @@ schedtune_cpu_update(int cpu, u64 now)
 	/* Ensures boost_max is non-negative when all cgroup boost values
 	 * are neagtive. Avoids under-accounting of cpu capacity which may cause
 	 * task stacking and frequency spikes.*/
-	//boost_max = max(boost_max, 0);
+	boost_max = max(boost_max, 0);
 	bg->boost_max = boost_max;
 	bg->boost_ts = boost_ts;
 }
@@ -469,7 +472,7 @@ static int sched_colocate_write(struct cgroup_subsys_state *css,
 		return -EPERM;
 
 	st->colocate = !!colocate;
-	//st->colocate_update_disabled = true;
+	st->colocate_update_disabled = true;
 	return 0;
 }
 
@@ -539,6 +542,8 @@ int schedtune_cpu_boost(int cpu)
 	struct boost_groups *bg;
 	u64 now;
 
+    if( kernel_profile() == KPROFILE_BATTERY ) return 0;
+
 	bg = &per_cpu(cpu_boost_groups, cpu);
 	now = sched_clock_cpu(cpu);
 
@@ -558,14 +563,21 @@ int schedtune_task_boost(struct task_struct *p)
 		return 0;
 
 
+
 	/* Get task boost value */
 	rcu_read_lock();
 	st = task_schedtune(p);
 	task_boost = st->boost;
 	rcu_read_unlock();
 
-    if( (p->prio > DEFAULT_PRIO || unlikely(is_battery_saver_on()) ) && task_boost > 0 ) return 0;
-
+    if( task_boost > 0 ) {
+        if( kernel_profile() == KPROFILE_BATTERY ) return 0;
+        if( p->prio > DEFAULT_PRIO ) return 0;
+        if( p->signal->oom_score_adj > 0 ) {
+            if( unlikely(enable_boost_debug) ) pr_info("Boosted background task %d, %d, %d", p->pid, task_boost, p->signal->oom_score_adj);
+            return 0;
+        }
+    }
 
 	return task_boost;
 }
@@ -575,14 +587,23 @@ int schedtune_prefer_idle(struct task_struct *p)
 	struct schedtune *st;
 	int prefer_idle;
 
-	if (unlikely(!schedtune_initialized) || unlikely(is_battery_saver_on()))
+	if (unlikely(!schedtune_initialized))
 		return 0;
+
+    if( kernel_profile() == KPROFILE_BATTERY ) return 0;
+
+    if( p->prio > DEFAULT_PRIO ) return 0;
 
 	/* Get prefer_idle value */
 	rcu_read_lock();
 	st = task_schedtune(p);
 	prefer_idle = st->prefer_idle;
 	rcu_read_unlock();
+
+    if( prefer_idle && (p->signal->oom_score_adj > 0) ) {
+        if( unlikely(enable_boost_debug) ) pr_info("Prefer idle background task %d, %d, %d", p->pid, prefer_idle, p->signal->oom_score_adj);
+        return 0;
+    }
 
 	return prefer_idle;
 }
@@ -591,9 +612,6 @@ static u64
 prefer_idle_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
 	struct schedtune *st = css_st(css);
-
-	if (unlikely(is_battery_saver_on()))
-		return 0;
 
 	return st->prefer_idle;
 }
@@ -612,9 +630,6 @@ static s64
 boost_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
 	struct schedtune *st = css_st(css);
-
-	if (unlikely(is_battery_saver_on()))
-		return 0;
 
 	return st->boost;
 }
@@ -647,6 +662,8 @@ boost_write(struct cgroup_subsys_state *css, struct cftype *cft,
 	    s64 boost)
 {
 	struct schedtune *st = css_st(css);
+    if (boost < -100 ) boost = -100;
+    if (boost > 100 ) boost = 100;
 
 	if (boost < -100 || boost > 100)
 		return -EINVAL;
@@ -664,8 +681,10 @@ int schedtune_prefer_high_cap(struct task_struct *p)
 	struct schedtune *st;
 	int prefer_high_cap;
 
-	if (unlikely(!schedtune_initialized) || unlikely(is_battery_saver_on()))
+	if (unlikely(!schedtune_initialized))
 		return 0;
+
+    if( kernel_profile() == KPROFILE_BATTERY ) return 0;
 
     if( p->prio > DEFAULT_PRIO ) return 0;
 
@@ -674,6 +693,11 @@ int schedtune_prefer_high_cap(struct task_struct *p)
 	st = task_schedtune(p);
 	prefer_high_cap = st->prefer_high_cap;
 	rcu_read_unlock();
+
+    if( prefer_high_cap && (p->signal->oom_score_adj > 0) ) {
+        if( unlikely(enable_boost_debug) ) pr_info("High cap background task %d, %d, %d", p->pid, prefer_high_cap, p->signal->oom_score_adj);
+        return 0;
+    }
 
 	return prefer_high_cap;
 }

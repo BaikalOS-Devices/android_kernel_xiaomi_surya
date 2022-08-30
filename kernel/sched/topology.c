@@ -1278,7 +1278,7 @@ sd_init(struct sched_domain_topology_level *tl,
 	*sd = (struct sched_domain){
 		.min_interval		= sd_weight,
 		.max_interval		= 2*sd_weight,
-		.busy_factor		= 32,
+		.busy_factor		= 16,
 		.imbalance_pct		= 125,
 
 		.cache_nice_tries	= 0,
@@ -1340,9 +1340,18 @@ sd_init(struct sched_domain_topology_level *tl,
 	 * Convert topological properties into behaviour.
 	 */
 
-	/* Don't attempt to spread across CPUs of different capacities. */
-	if ((sd->flags & SD_ASYM_CPUCAPACITY) && sd->child)
-		sd->child->flags &= ~SD_PREFER_SIBLING;
+	if (sd->flags & SD_ASYM_CPUCAPACITY) {
+		struct sched_domain *t = sd;
+
+		/*
+		 * Don't attempt to spread across cpus of different capacities.
+		 */
+		if (sd->child)
+			sd->child->flags &= ~SD_PREFER_SIBLING;
+
+		for_each_lower_domain(t)
+			t->flags |= SD_BALANCE_WAKE;
+	}
 
 	if (sd->flags & SD_SHARE_CPUCAPACITY) {
 		sd->imbalance_pct = 110;

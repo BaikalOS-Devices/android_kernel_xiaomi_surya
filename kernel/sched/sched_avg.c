@@ -165,6 +165,13 @@ EXPORT_SYMBOL(sched_update_nr_prod);
  * Returns the CPU utilization % in the last window.
  *
  */
+
+
+unsigned int sched_get_cpu_util(int cpu) {
+    return per_cpu(sched_cur_load, cpu);
+}
+
+/*
 unsigned int sched_get_cpu_util(int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
@@ -189,7 +196,7 @@ unsigned int sched_get_cpu_util(int cpu)
 	util = (util >= capacity) ? capacity : util;
 	busy = div64_ul((util * 100), capacity);
 	return busy;
-}
+}*/
 
 u64 sched_get_cpu_last_busy_time(int cpu)
 {

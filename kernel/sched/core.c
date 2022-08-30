@@ -26,6 +26,7 @@
 #include <linux/kprobes.h>
 #include <linux/mmu_context.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/nmi.h>
 #include <linux/prefetch.h>
 #include <linux/profile.h>
@@ -44,12 +45,22 @@
 #endif
 
 #include "sched.h"
+#include "tune.h"
 #include "walt.h"
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
+
+#ifdef MODULE_PARAM_PREFIX
+#undef MODULE_PARAM_PREFIX
+#endif
+#define MODULE_PARAM_PREFIX "sched."
+
+static bool enable_perf_mask = true;
+module_param(enable_perf_mask, bool, 0664);
+
 
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
@@ -1076,6 +1087,12 @@ static int migration_cpu_stop(void *data)
  */
 void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_mask)
 {
+    if( *cpumask_bits(new_mask) == 0xFF && schedtune_task_boost(p) < 0 ) {
+        pr_info("allow all cores on background task %d %02X", p->pid, *cpumask_bits(new_mask));
+        //dump_stack();
+    } else {
+        //pr_info("set allowed cpus on task %d %02X", p->pid, *cpumask_bits(new_mask));
+    }
 	cpumask_copy(&p->cpus_allowed, new_mask);
 	p->nr_cpus_allowed = cpumask_weight(new_mask);
 }
@@ -1084,6 +1101,14 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 {
 	struct rq *rq = task_rq(p);
 	bool queued, running;
+
+    if( *cpumask_bits(new_mask) == 0xFF && schedtune_task_boost(p) < 0 ) {
+        pr_info("allow all cores on background task %d %02X", p->pid, *cpumask_bits(new_mask));
+        dump_stack();
+    } else {
+        //pr_info("set allowed cpus on task %d %02X", p->pid, *cpumask_bits(new_mask));
+    }
+
 
 	lockdep_assert_held(&p->pi_lock);
 
@@ -1128,11 +1153,20 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	int ret = 0;
 	cpumask_t allowed_mask;
 
+
 	/* Don't allow perf-critical threads to have non-perf affinities */
 	if ((p->flags & PF_PERF_CRITICAL) && new_mask != cpu_lp_mask &&
 	    new_mask != cpu_perf_mask && new_mask != cpu_perf_first_mask &&
-	    new_mask != cpu_perf_second_mask)
+	    new_mask != cpu_perf_second_mask) {
+        //dump_stack();
 		return -EINVAL;
+        //new_mask =  cpu_perf_mask;
+        
+    }
+
+    /*if( !enable_perf_mask ) {
+        new_mask = cpu_possible_mask;
+    }*/
 
 	rq = task_rq_lock(p, &rf);
 	update_rq_clock(rq);
@@ -1149,6 +1183,8 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	 * sched_setaffinity() is not guaranteed to observe the flag.
 	 */
 	if (check && (p->flags & PF_NO_SETAFFINITY)) {
+        pr_info("ignore  __set_cpus_allowed_ptr on PF_NO_SETAFFINITY");
+        //dump_stack();
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1156,7 +1192,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	if (cpumask_equal(&p->cpus_allowed, new_mask))
 		goto out;
 
-	cpumask_andnot(&allowed_mask, new_mask, cpu_isolated_mask);
+	//cpumask_andnot(&allowed_mask, new_mask, cpu_isolated_mask);
 	cpumask_and(&allowed_mask, &allowed_mask, cpu_valid_mask);
 
 	dest_cpu = cpumask_any(&allowed_mask);
@@ -1164,6 +1200,8 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 		cpumask_and(&allowed_mask, cpu_valid_mask, new_mask);
 		dest_cpu = cpumask_any(&allowed_mask);
 		if (!cpumask_intersects(new_mask, cpu_valid_mask)) {
+            pr_info("ignore  __set_cpus_allowed_ptr new mask %02X not valid %02X", *cpumask_bits(new_mask), *cpumask_bits(cpu_valid_mask));
+            //dump_stack();
 			ret = -EINVAL;
 			goto out;
 		}
@@ -1389,6 +1427,9 @@ void sched_migrate_to_cpumask_start(struct cpumask *old_mask,
 {
 	struct task_struct *p = current;
 
+    //pr_info("sched_migrate_to_cpumask_start from %02X to %02X", *cpumask_bits(&p->cpus_allowed), *cpumask_bits(dest));
+    //dump_stack();
+
 	raw_spin_lock_irq(&p->pi_lock);
 	*cpumask_bits(old_mask) = *cpumask_bits(&p->cpus_allowed);
 	raw_spin_unlock_irq(&p->pi_lock);
@@ -1397,7 +1438,7 @@ void sched_migrate_to_cpumask_start(struct cpumask *old_mask,
 	 * This will force the current task onto the destination cpumask. It
 	 * will sleep when a migration to another CPU is actually needed.
 	 */
-	set_cpus_allowed_ptr(p, dest);
+	//set_cpus_allowed_ptr(p, dest);
 }
 
 void sched_migrate_to_cpumask_end(const struct cpumask *old_mask,
@@ -1415,7 +1456,7 @@ void sched_migrate_to_cpumask_end(const struct cpumask *old_mask,
 		struct rq *rq = this_rq();
 
 		raw_spin_lock(&rq->lock);
-		do_set_cpus_allowed(p, old_mask);
+		//do_set_cpus_allowed(p, old_mask);
 		raw_spin_unlock(&rq->lock);
 	}
 	raw_spin_unlock_irq(&p->pi_lock);
@@ -1631,12 +1672,14 @@ static int select_fallback_rq(int cpu, struct task_struct *p, bool allow_iso)
 			}
 			/* Fall-through */
 		case possible:
-			do_set_cpus_allowed(p, cpu_possible_mask);
+            allow_iso = true;
+			//do_set_cpus_allowed(p, cpu_possible_mask);
 			state = fail;
 			break;
 
 		case fail:
-			allow_iso = true;
+			//allow_iso = true;
+            do_set_cpus_allowed(p, cpu_possible_mask);
 			state = bug;
 			break;
 
@@ -4215,29 +4258,26 @@ static void __setscheduler_params(struct task_struct *p,
 		const struct sched_attr *attr)
 {
 	int policy = attr->sched_policy;
-    int prio = attr->sched_priority;
-    int nice = attr->sched_nice;
-    int org_policy;
 
     //pr_info("__setscheduler_params %d policy=%X prio=%d nice=%d", p->pid, policy, prio, nice);
 
 	if (policy == SETPARAM_POLICY)
 		policy = p->policy;
 
-    p->policy = policy == SCHED_FIFO ? SCHED_RR : policy;
-    //p->policy = policy;
+    //p->policy = policy == SCHED_FIFO ? SCHED_RR : policy;
+    p->policy = policy;
 
 	if (dl_policy(policy))
 		__setparam_dl(p, attr);
 	else if (fair_policy(policy))
-		p->static_prio = NICE_TO_PRIO(nice);
+		p->static_prio = NICE_TO_PRIO(attr->sched_nice);
 
 	/*
 	 * __sched_setscheduler() ensures attr->sched_priority == 0 when
 	 * !rt_policy. Always setting this ensures that things like
 	 * getparam()/getattr() don't report silly values for !rt tasks.
 	 */
-	p->rt_priority = prio; //attr->sched_priority;
+	p->rt_priority = attr->sched_priority; 
 	p->normal_prio = normal_prio(p);
 	set_load_weight(p);
 }
@@ -4959,7 +4999,7 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 	}
 #endif
 again:
-	cpumask_andnot(&allowed_mask, new_mask, cpu_isolated_mask);
+	//cpumask_andnot(&allowed_mask, new_mask, cpu_isolated_mask);
 	dest_cpu = cpumask_any_and(cpu_active_mask, &allowed_mask);
 	if (dest_cpu < nr_cpu_ids) {
 		retval = __set_cpus_allowed_ptr(p, new_mask, true);
@@ -5177,8 +5217,8 @@ long sched_getaffinity(pid_t pid, struct cpumask *mask)
 	 * isolated CPUs. So exclude isolated CPUs from
 	 * the getaffinity.
 	 */
-	if (!(p->flags & PF_KTHREAD))
-		cpumask_andnot(mask, mask, cpu_isolated_mask);
+	//if (!(p->flags & PF_KTHREAD))
+	//	cpumask_andnot(mask, mask, cpu_isolated_mask);
 
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 
@@ -5745,6 +5785,7 @@ int task_can_attach(struct task_struct *p,
 	 * before cpus_allowed may be changed.
 	 */
 	if (p->flags & PF_NO_SETAFFINITY) {
+        pr_info("can't move task %d to %02X cpus, PF_NO_SETAFFINITY", p->pid, *cpumask_bits(cs_cpus_allowed));
 		ret = -EINVAL;
 		goto out;
 	}
@@ -7140,17 +7181,18 @@ static int __sched_updown_migrate_handler(struct ctl_table *table, int write,
 
 	mutex_lock(&mutex);
 
-    pr_err("Migrate: %s", write ? "write" : "read");
+    pr_info("migrate margins: %s", write ? "write" : "read");
 
 	if (cap_margin_levels == -1 ||
 		table->maxlen != (sizeof(unsigned int) * cap_margin_levels)) {
 		cap_margin_levels = find_capacity_margin_levels();
-        pr_err("Migrate: cap_margin_levels %d", cap_margin_levels);
+        pr_err("migrate margins: cap_margin_levels %d", cap_margin_levels);
 		table->maxlen = sizeof(unsigned int) * cap_margin_levels;
 	}
 
 	if (cap_margin_levels <= 0) {
 		ret = -EINVAL;
+        pr_info("migrate margins_vels: %d", cap_margin_levels);
 		goto unlock_mutex;
 	}
 
@@ -7176,6 +7218,7 @@ static int __sched_updown_migrate_handler(struct ctl_table *table, int write,
 
 	if (ret) {
 		memcpy(data, old_val, table->maxlen);
+        pr_info("migrate invalid data: \'%s\'", buffer);
 		goto free_old_val;
 	}
 
@@ -7215,6 +7258,7 @@ int sched_updown_migrate_handler(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp,
 				 loff_t *ppos)
 {
+    pr_info("sched_updown_migrate_handler");
 	return __sched_updown_migrate_handler(table, write, buffer,
 					      lenp, ppos, false);
 }
@@ -7223,6 +7267,7 @@ int sched_updown_migrate_handler_boosted(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp,
 				 loff_t *ppos)
 {
+    pr_info("sched_updown_migrate_handler_boosted");
 	return __sched_updown_migrate_handler(table, write, buffer,
 					      lenp, ppos, true);
 }

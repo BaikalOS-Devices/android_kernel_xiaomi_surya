@@ -18,6 +18,8 @@
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
 #include <linux/moduleparam.h>
+#include <linux/kernel_profile.h>
+
 #include "sched.h"
 
 #define SUGOV_KTHREAD_PRIORITY	50
@@ -199,7 +201,7 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 	} else {
 		if (use_pelt())
 			sg_policy->work_in_progress = true;
-		irq_work_queue(&sg_policy->irq_work);
+		sched_irq_work_queue(&sg_policy->irq_work);
 	}
 }
 
@@ -232,32 +234,41 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
+    //unsigned int max_freq = freq;
 
     unsigned int freq_calc = freq;
     unsigned int freq_base = freq;
+    freq_orig = (freq_base + (freq_base >> 2)) * util / max;
+  	//freq_orig = (freq + (freq >> 2)) * int_sqrt(util * 100 / max) / 10;
 
-    if( enable_cpu_boost /*&& cpu_boost_freq*/ ) {
-        if (enable_perf_boost || policy->cpu <= 5)  {
-            freq = ( (freq + (freq >> 2) + (freq * cpu_boost_freq)/10 ) * util ) / max;                                     
-        } else {
-            freq = (freq + (freq >> 2)) * util / max;
-        }
+    if( max <= 1 ) {
+        freq = 0;
+    }
+    else if( kernel_profile() == KPROFILE_BATTERY ) {
+        freq = (freq + (freq >> 3)) * util / max;
+    }
+    else if( enable_cpu_boost && cpu_boost_freq ) {
+        freq_orig = (freq + (freq >> 2)) * int_sqrt((util*100 + (util*cpu_boost_freq*10)) / max)/10;
     } else {
         freq = (freq + (freq >> 2)) * util / max;
     }
 
 	trace_sugov_next_freq(policy->cpu, util, max, freq);
 
-	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
-		return sg_policy->next_freq;
-	sg_policy->cached_raw_freq = freq;
-
     freq_calc = freq;
     freq = cpufreq_driver_resolve_freq(policy, freq);
 
+	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX) {
+
+        if( unlikely(enable_freq_debug) ) {
+            pr_info("get_next_freq cached (%d): util=%d, max=%d, freq=%d, freq_orig=%d, freq_calc=%d", policy->cpu, util, max, freq, freq_orig, freq_calc);
+        }
+		return sg_policy->next_freq;
+    }
+
+	sg_policy->cached_raw_freq = freq;
+
     if( unlikely(enable_freq_debug) ) {
-    	//freq_orig = (freq + (freq >> 2)) * int_sqrt(util * 100 / max) / 10;
-        freq_orig = (freq_base + (freq_base >> 2)) * util / max;
         pr_info("get_next_freq (%d): util=%d, max=%d, freq=%d, freq_orig=%d, freq_calc=%d", policy->cpu, util, max, freq, freq_orig, freq_calc);
     }
     return freq;
