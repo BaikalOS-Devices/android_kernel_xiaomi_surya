@@ -6857,7 +6857,7 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 struct reciprocal_value schedtune_spc_rdiv;
 
 static long
-schedtune_margin(unsigned long signal, long boost) // , long capacity, bool force_spc)
+schedtune_margin(unsigned long signal, long boost, long capacity)
 {
 	long long margin = 0;
 
@@ -6870,8 +6870,8 @@ schedtune_margin(unsigned long signal, long boost) // , long capacity, bool forc
 	 * The obtained M could be used by the caller to "boost" S.
 	 */
 
-    int capacity = SCHED_CAPACITY_SCALE;
 
+    if( boost == 0 ) return 0;
     if( signal <= 0 || signal >= capacity ) return 0;
 
     if( boost < 0 ) {
@@ -6883,15 +6883,16 @@ schedtune_margin(unsigned long signal, long boost) // , long capacity, bool forc
       			margin = capacity - signal;
        			margin *= boost;
    	    	} else {
-                
+                return 0;
             }
         } else {
             //margin = (capacity * ilog2(signal + 1) + 5)/ 10;
 
-            int x = signal*100/capacity;
-            int square = - (((x-50)*(x-50))/25-100);
-            margin = (capacity * square)/100;
-            margin *= boost; 
+            //int x = signal*100/capacity;
+            //int square = - (((x-50)*(x-50))/25-100);
+            //margin = (capacity * square)/100;
+            //margin *= boost; 
+            margin = signal * boost;
         }
     }
 
@@ -6907,48 +6908,31 @@ schedtune_margin(unsigned long signal, long boost) // , long capacity, bool forc
 static inline int
 schedtune_cpu_margin(unsigned long util, int cpu)
 {
-	long margin;
-    bool force_spc = false;
+	long margin_boost = 0;
 	int boost = schedtune_cpu_boost(cpu);
 
-	if (boost <= 0) return 0;
+	if (boost <= 0 ) return 0;
+    if (!enable_freq_boost) return util;
 
-    if( boost > 0 && !enable_perf_boost && cpu > 5 ) return 0;
+    if( boost >= 0 && !enable_perf_boost && cpu > 5 ) return 0;
 
-    //force_spc = boost < 0 ? false : (util > capacity_orig_of(cpu)/2);
-    margin = schedtune_margin(util, boost); // , capacity_orig_of(cpu), force_spc );
+    margin_boost = schedtune_margin(util, boost, capacity_orig_of(cpu)); 
 
-    /*if( unlikely(enable_boost_debug) ) {
-       pr_info("boost_cpu(%d):%d  %d + %d = %d -> %d", cpu, util, boost, margin, util + margin, capacity_orig_of(cpu));
-    }*/
-
-	return margin;
+	return margin_boost;
 }
 
 static inline long
-schedtune_task_margin(struct task_struct *task)
+schedtune_task_margin(unsigned long util, struct task_struct *task)
 {
-	unsigned long util;
-	long margin;
-    bool force_spc = false;
+	long margin_boost = 0;
 	int boost = schedtune_task_boost(task);
 
 	if( boost == 0 ) return 0;
     if( !enable_task_boost && boost >= 0 ) return 0;
 
-    if( boost >= 0 && !enable_perf_boost && task_cpu(task) > 5 ) return 0;
+	margin_boost = schedtune_margin(util, boost, SCHED_CAPACITY_SCALE); 
 
-	util = task_util_est(task);
-	//margin = schedtune_margin(util, boost, SCHED_CAPACITY_SCALE, util > SCHED_CAPACITY_SCALE/2 );
-    //force_spc = boost < 0 ? false : (util > capacity_orig_of(task_cpu(task))/2);
-	margin = schedtune_margin(util, boost); //, capacity_orig_of(task_cpu(task)), force_spc );
-
-    /*if( unlikely(enable_boost_debug) ) {
-       pr_info("boost_util(%d):%d  %d + %d = %d -> %d (pid=%d,allowed=%02X)", 
-            task_cpu(task), util, boost, margin, util + margin, capacity_orig_of(task_cpu(task)), task->pid, *cpumask_bits(&task->cpus_allowed));
-    }*/
-
-	return margin;
+	return margin_boost;
 }
 
 #else /* CONFIG_SCHED_TUNE */
@@ -6960,7 +6944,7 @@ schedtune_cpu_margin(unsigned long util, int cpu)
 }
 
 static inline int
-schedtune_task_margin(struct task_struct *task)
+schedtune_task_margin(unsigned long util, struct task_struct *task)
 {
 	return 0;
 }
@@ -6970,30 +6954,87 @@ schedtune_task_margin(struct task_struct *task)
 unsigned long
 boosted_cpu_util(int cpu, struct sched_walt_cpu_load *walt_load)
 {
+    unsigned long margin_util = 0;
 	unsigned long util = cpu_util_freq(cpu, walt_load);
+	int util_min = schedtune_cpu_util_min(cpu);
+    int util_max = schedtune_cpu_util_max(cpu);
+	int boost = schedtune_cpu_boost(cpu);
+    long margin_boost = schedtune_cpu_margin(util, cpu);
 
-	if (enable_freq_boost /*&& sched_feat(SCHEDTUNE_BOOST_UTIL)*/) {
-     	long margin = schedtune_cpu_margin(util, cpu);
-     	//trace_sched_boost_cpu(cpu, util, margin);
-        if( util + margin < 0 ) return 0;
-    	return util + margin;
-    } else
-        return util;
+    if( !enable_perf_boost && cpu > 5 ) return util + margin_boost;
+
+    if( util_max == 0 ) util_max = 100; // capacity_orig_of(cpu);
+
+    if( util_max == 100 && util_min == 0)  {
+        if( unlikely(enable_boost_debug) && (util_min != 0 || util_max !=100 || boost !=0 )) {
+           pr_info("boost_cpu(%d):%d  %d + %d + %d = %d -> %d (1)", cpu, util, boost, margin_boost, 0, util + margin_boost, capacity_orig_of(cpu));
+        }
+        return util + margin_boost;
+    }
+
+    long util_min_n = DIV_ROUND_CLOSEST_ULL(capacity_orig_of(cpu) * util_min, 100);
+    long util_max_n = DIV_ROUND_CLOSEST_ULL(capacity_orig_of(cpu) * util_max, 100);
+
+    if( util == 0 )  {
+        if( unlikely(enable_boost_debug) && (util_min !=0 || util_max !=100 || boost !=0 )) {
+           pr_info("boost_cpu(%d):%d  %d + %d + %d = %d -> %d (2)", cpu, util, -1, -1, util_min_n, util_min_n, capacity_orig_of(cpu));
+        }
+        return util_min_n;
+    }
+
+    margin_util = util_min_n + DIV_ROUND_CLOSEST_ULL((util + margin_boost) * (util_max_n - util_min_n), capacity_orig_of(cpu));
+
+    if( unlikely(enable_boost_debug) && (util_min !=0 || util_max !=100 || boost !=0 ) ) {
+       pr_info("boost_cpu(%d):%d  %d + %d + %d = %d -> %d", cpu, util, boost, margin_boost, util_min_n, margin_util, capacity_orig_of(cpu));
+    }
+
+  	return margin_util;
 }
 
 static inline unsigned long
 boosted_task_util(struct task_struct *task)
 {
+    unsigned long margin_util = 0;
 	unsigned long util = task_util_est(task);
+	int util_min = schedtune_util_min(task);
+    int util_max = schedtune_util_max(task);
+	int boost = schedtune_task_boost(task);
 
-	//if (enable_task_boost /*&& sched_feat(SCHEDTUNE_BOOST_UTIL)*/) {
-    	long margin = schedtune_task_margin(task);
-	    //trace_sched_boost_task(task, util, margin);
-        if( util + margin < 0 ) return 0;
-        //if( !enable_task_boost && margin > 0 ) return 0;
-		return util + margin;
-	//} else
-	//	return util;
+   	long margin_boost = schedtune_task_margin(util, task);
+
+    if( util_max == 0 ) util_max = 100;
+
+    if( task->util_min != 0 && task->util_min > util_min ) util_min = task->util_min;
+    if( task->util_max != 0 && task->util_max < util_max ) util_max = task->util_max;
+
+    if( util_min == 0 && util_max == 100 ) { 
+        if( unlikely(enable_boost_debug) && (util_min !=0 || util_max != 100 || boost != 0) ) {
+           pr_info("boost_util(%d):%d  %d + %d + %d = %d -> %d (pid=%d,allowed=%02X) (1)", 
+                task_cpu(task), util, boost, margin_boost, util_min, util + margin_boost, capacity_orig_of(task_cpu(task)), task->pid, *cpumask_bits(&task->cpus_allowed));
+        }
+        return util + margin_boost;
+    }
+
+    long util_min_n = DIV_ROUND_CLOSEST_ULL(SCHED_CAPACITY_SCALE * util_min,100);
+    long util_max_n = DIV_ROUND_CLOSEST_ULL(SCHED_CAPACITY_SCALE * util_max,100);
+
+    if( util == 0 ) { 
+        if( unlikely(enable_boost_debug) && (util_min !=0 || util_max != 100 || boost !=0 ) ) {
+           pr_info("boost_util(%d):%d  %d + %d +%d = %d -> %d (pid=%d,allowed=%02X) (2)", 
+                task_cpu(task), util, -1, util_min_n, util_min_n, capacity_orig_of(task_cpu(task)), task->pid, *cpumask_bits(&task->cpus_allowed));
+        }
+        return util_min_n;
+    }
+
+
+    margin_util = util_min_n + DIV_ROUND_CLOSEST_ULL((util + margin_boost) * (util_max_n - util_min_n), SCHED_CAPACITY_SCALE);
+
+    if( unlikely(enable_boost_debug) && (util_min !=0 || util_max != 100 || boost !=0 ) ) {
+       pr_info("boost_util(%d):%d  %d + %d + %d = %d -> %d (pid=%d,allowed=%02X)", 
+            task_cpu(task), util, boost, margin_boost, util_min_n, margin_util, capacity_orig_of(task_cpu(task)), task->pid, *cpumask_bits(&task->cpus_allowed));
+    }
+
+    return margin_util;
 }
 
 static unsigned long cpu_util_without(int cpu, struct task_struct *p);
@@ -7710,6 +7751,11 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	int mid_cap_orig_cpu = cpu_rq(smp_processor_id())->rd->mid_cap_orig_cpu;
 	struct task_struct *curr_tsk;
 
+    //long clamp_min = p->util_min;
+    //long clamp_max = p->util_max;
+
+    //if( clamp_max == 0 ) clamp_max = 100;
+
 	*backup_cpu = -1;
 
 	/*
@@ -7767,6 +7813,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	do {
 		for_each_cpu_and(i, &p->cpus_allowed, sched_group_span(sg)) {
 			unsigned long capacity_curr = capacity_curr_of(i);
+            unsigned long capacity = capacity_of(i);
 			unsigned long capacity_orig = capacity_orig_of(i);
 			unsigned long wake_util, new_util, new_util_cuml;
 			long spare_cap;
@@ -7794,10 +7841,11 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 
             if( cpu_isolated(i) ) {
     			if (isolated_candidate == -1) {
-                    if( prefer_high_cap ) 
-                        if( i>=s_cpu ) isolated_candidate = i;
-                    else 
+                    if( prefer_high_cap ) {
+                        if( i >= s_cpu ) isolated_candidate = i;
+                    } else {
     			    	isolated_candidate = i;
+                    }
                 }
                 //continue;
             }
@@ -7808,8 +7856,11 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			 * accounting. However, the blocked utilization may be zero.
 			 */
 			wake_util = cpu_util_without(i, p);
-			new_util = wake_util + task_util_est(p);
-			spare_wake_cap = capacity_orig_of(i) - wake_util;
+			//new_util = wake_util + task_util_est(p);
+			new_util = wake_util + boosted_task_util(p);
+            //new_util = new_util + DIV_ROUND_CLOSEST_ULL(clamp_min * (clamp_max - new_util), SCHED_CAPACITY_SCALE);
+			//spare_wake_cap = capacity_orig - wake_util;
+			spare_cap = capacity_orig - new_util;
 
             if ( !prefer_high_cap || i>=s_cpu ) {
     			if (spare_wake_cap > most_spare_wake_cap) {
@@ -7851,7 +7902,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			 * to have available on this CPU once the task is
 			 * enqueued here.
 			 */
-			spare_cap = capacity_orig - new_util;
+			spare_cap = capacity - new_util;
 
 			if (idle_cpu(i))
 				idle_idx = idle_get_state_idx(cpu_rq(i));
@@ -7976,8 +8027,8 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			if (capacity_orig < capacity_orig_of(cpu))
 				continue;
 
-
-
+            if (capacity_orig > target_capacity)
+				continue;
 
 			/*
 			 * Case B) Non latency sensitive tasks on IDLE CPUs.

@@ -64,6 +64,10 @@ struct schedtune {
 	/* Hint to bias scheduling of tasks on that SchedTune CGroup
 	 * towards higher capacity CPUs */
 	bool prefer_high_cap;
+
+    /* Minimum utilization */
+    int util_min;
+    int util_max;
 };
 
 static inline struct schedtune *css_st(struct cgroup_subsys_state *css)
@@ -100,6 +104,8 @@ static struct schedtune root_schedtune = {
 #endif
 	.prefer_idle = 0,
 	.prefer_high_cap = false,
+    .util_min = 0,
+    .util_max = 0,
 };
 
 /*
@@ -134,9 +140,15 @@ struct boost_groups {
 	bool idle;
 	int boost_max;
 	u64 boost_ts;
+    int util_min_c;
+    int util_max_c;
+
 	struct {
 		/* The boost for tasks on that boost group */
 		int boost;
+        int util_min;
+        int util_max;
+
 		/* Count of RUNNABLE tasks on that boost group */
 		unsigned tasks;
 		/* Timestamp of boost activation */
@@ -231,12 +243,14 @@ static void
 schedtune_cpu_update(int cpu, u64 now)
 {
 	struct boost_groups *bg = &per_cpu(cpu_boost_groups, cpu);
-	int boost_max;
+	int boost_max, util_min, util_max;
 	u64 boost_ts;
 	int idx;
 
 	/* The root boost group is always active */
 	boost_max = bg->group[0].boost;
+    util_min = bg->group[0].util_min;
+    util_max = bg->group[0].util_max;
 	boost_ts = now;
 	for (idx = 1; idx < BOOSTGROUPS_COUNT; ++idx) {
 		/*
@@ -248,11 +262,20 @@ schedtune_cpu_update(int cpu, u64 now)
 			continue;
 
 		/* This boost group is active */
-		if (boost_max > bg->group[idx].boost)
-			continue;
+		if (boost_max < bg->group[idx].boost) {
+			//continue;
 
-		boost_max = bg->group[idx].boost;
-		boost_ts =  bg->group[idx].ts;
+    		boost_max = bg->group[idx].boost;
+    		boost_ts =  bg->group[idx].ts;
+        }
+
+        if( util_min < bg->group[idx].util_min ) {
+            util_min = bg->group[idx].util_min;
+        }
+
+        if( bg->group[idx].util_max != 0 && util_max < bg->group[idx].util_max ) {
+            util_max = bg->group[idx].util_max;
+        }
 	}
 	/* Ensures boost_max is non-negative when all cgroup boost values
 	 * are neagtive. Avoids under-accounting of cpu capacity which may cause
@@ -260,6 +283,92 @@ schedtune_cpu_update(int cpu, u64 now)
 	boost_max = max(boost_max, 0);
 	bg->boost_max = boost_max;
 	bg->boost_ts = boost_ts;
+    bg->util_max_c = util_max;
+    bg->util_min_c = util_min;
+}
+
+static int
+schedtune_boostgroup_update_util_min(int idx, long util_min)
+{
+	struct boost_groups *bg;
+	int cur_util_min;
+	int old_util_min;
+	int cpu;
+	u64 now;
+
+	/* Update per CPU boost groups */
+	for_each_possible_cpu(cpu) {
+		bg = &per_cpu(cpu_boost_groups, cpu);
+
+		/*
+		 * Keep track of current boost values to compute the per CPU
+		 * maximum only when it has been affected by the new value of
+		 * the updated boost group
+		 */
+		cur_util_min = bg->util_min_c;
+		old_util_min = bg->group[idx].util_min;
+
+		/* Update the boost value of this boost group */
+		bg->group[idx].util_min = util_min;
+
+		/* Check if this update increase current max */
+		now = sched_clock_cpu(cpu);
+		if (util_min > cur_util_min &&
+			schedtune_boost_group_active(idx, bg, now)) {
+			bg->util_min_c = util_min;
+			continue;
+		}
+
+		/* Check if this update has decreased current max */
+		if (cur_util_min == old_util_min && old_util_min > util_min) {
+			schedtune_cpu_update(cpu, now);
+			continue;
+		}
+	}
+	return 0;
+
+}
+
+static int
+schedtune_boostgroup_update_util_max(int idx, long util_max)
+{
+	struct boost_groups *bg;
+	int cur_util_max;
+	int old_util_max;
+	int cpu;
+	u64 now;
+
+	/* Update per CPU boost groups */
+	for_each_possible_cpu(cpu) {
+		bg = &per_cpu(cpu_boost_groups, cpu);
+
+		/*
+		 * Keep track of current boost values to compute the per CPU
+		 * maximum only when it has been affected by the new value of
+		 * the updated boost group
+		 */
+		cur_util_max = bg->util_max_c;
+		old_util_max = bg->group[idx].util_max;
+
+		/* Update the boost value of this boost group */
+		bg->group[idx].util_max = util_max;
+
+		/* Check if this update increase current max */
+		now = sched_clock_cpu(cpu);
+		if (util_max > cur_util_max &&
+			schedtune_boost_group_active(idx, bg, now)) {
+			bg->util_max_c = util_max;
+			continue;
+		}
+
+		/* Check if this update has decreased current max */
+		if (cur_util_max == old_util_max && old_util_max > util_max) {
+			schedtune_cpu_update(cpu, now);
+			continue;
+		}
+	}
+	return 0;
+
 }
 
 static int
@@ -554,6 +663,28 @@ int schedtune_cpu_boost(int cpu)
 	return bg->boost_max;
 }
 
+int schedtune_cpu_util_min(int cpu)
+{
+	struct boost_groups *bg;
+	u64 now;
+
+    if( kernel_profile() == KPROFILE_BATTERY ) return 0;
+
+	bg = &per_cpu(cpu_boost_groups, cpu);
+
+	return bg->util_min_c;
+}
+
+int schedtune_cpu_util_max(int cpu)
+{
+	struct boost_groups *bg;
+	u64 now;
+
+	bg = &per_cpu(cpu_boost_groups, cpu);
+
+	return bg->util_max_c;
+}
+
 int schedtune_task_boost(struct task_struct *p)
 {
 	struct schedtune *st;
@@ -625,6 +756,105 @@ prefer_idle_write(struct cgroup_subsys_state *css, struct cftype *cft,
 
 	return 0;
 }
+
+
+int schedtune_util_min(struct task_struct *p)
+{
+	struct schedtune *st;
+	int util_min;
+
+	if (unlikely(!schedtune_initialized))
+		return 0;
+
+    if( kernel_profile() == KPROFILE_BATTERY ) return 0;
+
+    if( p->prio > DEFAULT_PRIO ) return 0;
+
+	/* Get prefer_idle value */
+	rcu_read_lock();
+	st = task_schedtune(p);
+	util_min = st->util_min;
+	rcu_read_unlock();
+
+    if( util_min && (p->signal->oom_score_adj > 0) ) {
+        if( unlikely(enable_boost_debug) ) pr_info("Min utilization background task %d, %d, %d", p->pid, util_min, p->signal->oom_score_adj);
+        return 0;
+    }
+
+	return util_min;
+}
+
+static u64
+util_min_read(struct cgroup_subsys_state *css, struct cftype *cft)
+{
+	struct schedtune *st = css_st(css);
+
+	return st->util_min;
+}
+
+static int
+util_min_write(struct cgroup_subsys_state *css, struct cftype *cft,
+	    u64 util_min)
+{
+	struct schedtune *st = css_st(css);
+
+    if (util_min < 0 ) return -EINVAL;
+    if (util_min > 100 ) return -EINVAL;
+
+	st->util_min = util_min;
+
+	schedtune_boostgroup_update_util_min(st->idx, st->util_min);
+
+	return 0;
+}
+
+
+int schedtune_util_max(struct task_struct *p)
+{
+	struct schedtune *st;
+	int util_max;
+
+	if (unlikely(!schedtune_initialized))
+		return 0;
+
+	/* Get prefer_idle value */
+	rcu_read_lock();
+	st = task_schedtune(p);
+	util_max = st->util_max;
+	rcu_read_unlock();
+
+    if( util_max && (p->signal->oom_score_adj > 0) ) {
+        if( unlikely(enable_boost_debug) ) pr_info("Max utilization background task %d, %d, %d", p->pid, util_max, p->signal->oom_score_adj);
+        return 0;
+    }
+
+	return util_max;
+}
+
+static u64
+util_max_read(struct cgroup_subsys_state *css, struct cftype *cft)
+{
+	struct schedtune *st = css_st(css);
+
+	return st->util_max;
+}
+
+static int
+util_max_write(struct cgroup_subsys_state *css, struct cftype *cft,
+	    u64 util_max)
+{
+	struct schedtune *st = css_st(css);
+
+    if (util_max < 0 ) return -EINVAL;
+    if (util_max > 100 ) return -EINVAL;
+
+	st->util_max = util_max;
+
+	schedtune_boostgroup_update_util_max(st->idx, st->util_max);
+
+	return 0;
+}
+
 
 static s64
 boost_read(struct cgroup_subsys_state *css, struct cftype *cft)
@@ -747,6 +977,16 @@ static struct cftype files[] = {
 		.read_u64 = prefer_high_cap_read,
 		.write_u64 = prefer_high_cap_write,
 	},
+	{
+		.name = "util_min",
+		.read_u64 = util_min_read,
+		.write_u64 = util_min_write,
+	},
+	{
+		.name = "util_max",
+		.read_u64 = util_max_read,
+		.write_u64 = util_max_write,
+	},
 	{} /* terminate */
 };
 
@@ -818,6 +1058,8 @@ schedtune_boostgroup_release(struct schedtune *st)
 {
 	/* Reset this boost group */
 	schedtune_boostgroup_update(st->idx, 0);
+    schedtune_boostgroup_update_util_min(st->idx, 0);
+    schedtune_boostgroup_update_util_max(st->idx, 0);
 
 	/* Keep track of allocated boost groups */
 	allocated_group[st->idx] = NULL;

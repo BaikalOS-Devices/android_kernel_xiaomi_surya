@@ -13,10 +13,15 @@ struct target_nrg {
 };
 
 int schedtune_cpu_boost(int cpu);
+int schedtune_cpu_util_min(int cpu);
+int schedtune_cpu_util_max(int cpu);
+
 int schedtune_task_boost(struct task_struct *tsk);
 
 int schedtune_prefer_idle(struct task_struct *tsk);
 int schedtune_prefer_high_cap(struct task_struct *tsk);
+int schedtune_util_min(struct task_struct *tsk);
+int schedtune_util_max(struct task_struct *tsk);
 
 void schedtune_enqueue_task(struct task_struct *p, int cpu);
 void schedtune_dequeue_task(struct task_struct *p, int cpu);

@@ -248,7 +248,9 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
         freq = (freq + (freq >> 3)) * util / max;
     }
     else if( enable_cpu_boost && cpu_boost_freq ) {
-        freq_orig = (freq + (freq >> 2)) * int_sqrt((util*100 + (util*cpu_boost_freq*10)) / max)/10;
+        //freq_orig = (freq + (freq >> 2)) * int_sqrt((util*100 + (util*cpu_boost_freq*10)) / max)/10;
+        freq = (freq + (freq >> 2)) * util / max;
+        freq = freq + freq * cpu_boost_freq / 100;
     } else {
         freq = (freq + (freq >> 2)) * util / max;
     }

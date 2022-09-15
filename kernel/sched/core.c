@@ -1087,12 +1087,6 @@ static int migration_cpu_stop(void *data)
  */
 void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_mask)
 {
-    if( *cpumask_bits(new_mask) == 0xFF && schedtune_task_boost(p) < 0 ) {
-        pr_info("allow all cores on background task %d %02X", p->pid, *cpumask_bits(new_mask));
-        //dump_stack();
-    } else {
-        //pr_info("set allowed cpus on task %d %02X", p->pid, *cpumask_bits(new_mask));
-    }
 	cpumask_copy(&p->cpus_allowed, new_mask);
 	p->nr_cpus_allowed = cpumask_weight(new_mask);
 }
@@ -1101,14 +1095,6 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 {
 	struct rq *rq = task_rq(p);
 	bool queued, running;
-
-    if( *cpumask_bits(new_mask) == 0xFF && schedtune_task_boost(p) < 0 ) {
-        pr_info("allow all cores on background task %d %02X", p->pid, *cpumask_bits(new_mask));
-        dump_stack();
-    } else {
-        //pr_info("set allowed cpus on task %d %02X", p->pid, *cpumask_bits(new_mask));
-    }
-
 
 	lockdep_assert_held(&p->pi_lock);
 
@@ -7103,13 +7089,19 @@ static void sched_update_up_migrate_values(int cap_margin_levels,
 		 */
 		for (i = 0; i < cap_margin_levels; i++)
 			if (cluster_cpus[i])
-				for_each_cpu(cpu, cluster_cpus[i])
-				    sched_capacity_margin_up_array[cpu] =
-				    sysctl_sched_capacity_margin_up_array[i];
+				for_each_cpu(cpu, cluster_cpus[i]) {
+                    if( sysctl_sched_capacity_margin_up_array[i] < 10240 ) {
+    				    sched_capacity_margin_up_array[cpu] =
+        				    sysctl_sched_capacity_margin_up_array[i];
+                    }
+                }
 	} else {
-		for_each_possible_cpu(cpu)
-			sched_capacity_margin_up_array[cpu] =
-				sysctl_sched_capacity_margin_up_array[0];
+		for_each_possible_cpu(cpu) {
+            if( sysctl_sched_capacity_margin_up_array[0] < 10240 ) {
+    			sched_capacity_margin_up_array[cpu] =
+    				sysctl_sched_capacity_margin_up_array[0];
+            }
+        }
 	}
 }
 
@@ -7130,13 +7122,19 @@ static void sched_update_down_migrate_values(int cap_margin_levels,
 		 */
 		for (i = 0; i < cap_margin_levels; i++)
 			if (cluster_cpus[i+1])
-				for_each_cpu(cpu, cluster_cpus[i+1])
-				    sched_capacity_margin_down_array[cpu] =
-				    sysctl_sched_capacity_margin_down_array[i];
+				for_each_cpu(cpu, cluster_cpus[i+1]) {
+                    if( sysctl_sched_capacity_margin_down_array[i] < 10240 ) {
+    				    sched_capacity_margin_down_array[cpu] =
+        				    sysctl_sched_capacity_margin_down_array[i];
+                    }
+                }
 	} else {
-		for_each_possible_cpu(cpu)
-			sched_capacity_margin_down_array[cpu] =
-				sysctl_sched_capacity_margin_down_array[0];
+		for_each_possible_cpu(cpu) {
+            if( sysctl_sched_capacity_margin_down_array[0] < 10240 ) {
+    			sched_capacity_margin_down_array[cpu] =
+    				sysctl_sched_capacity_margin_down_array[0];
+            }
+        }
 	}
 }
 
@@ -7167,7 +7165,7 @@ static int __sched_updown_migrate_handler(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp,
 				 loff_t *ppos, bool boosted)
 {
-	int ret, i;
+	int ret = 0, i;
 	unsigned int *data = (unsigned int *)table->data;
 	unsigned int *old_val;
 	static DEFINE_MUTEX(mutex);
@@ -7192,7 +7190,7 @@ static int __sched_updown_migrate_handler(struct ctl_table *table, int write,
 
 	if (cap_margin_levels <= 0) {
 		ret = -EINVAL;
-        pr_info("migrate margins_vels: %d", cap_margin_levels);
+        pr_info("migrate margins_levels: %d", cap_margin_levels);
 		goto unlock_mutex;
 	}
 
@@ -7211,6 +7209,25 @@ static int __sched_updown_migrate_handler(struct ctl_table *table, int write,
 		ret = -ENOMEM;
 		goto unlock_mutex;
 	}
+
+    pr_info("migrate memcpy maxlen: %d", table->maxlen );
+
+    if( write ) {
+    	int left = *lenp;
+        if( !left ) { 
+            pr_info("invalid left\n");
+            goto unlock_mutex;
+        }
+        char * kbuf = memdup_user_nul(buffer, left);
+		if (IS_ERR(kbuf)) {
+            pr_info("invalid kbuff\n");
+            goto unlock_mutex;
+        }
+
+        if( *kbuf == '0' ) ret =-EINVAL;
+        kfree(kbuf);
+        if( ret ) goto unlock_mutex;
+    }
 
 	memcpy(old_val, data, table->maxlen);
 
