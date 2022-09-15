@@ -558,7 +558,7 @@ static void pm_qos_irq_release(struct kref *ref)
 				pm_qos_array[req->pm_qos_class]->constraints;
 
 	pm_qos_update_target_cpus(c, &req->node, PM_QOS_UPDATE_REQ,
-				  c->default_value, CPUMASK_ALL);
+				  c->default_value, atomic_read(&req->cpus_affine) /*CPUMASK_ALL*/);
 }
 
 static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
