@@ -68,6 +68,8 @@ struct schedtune {
     /* Minimum utilization */
     int util_min;
     int util_max;
+
+    bool is_top_app;
 };
 
 static inline struct schedtune *css_st(struct cgroup_subsys_state *css)
@@ -106,6 +108,7 @@ static struct schedtune root_schedtune = {
 	.prefer_high_cap = false,
     .util_min = 0,
     .util_max = 0,
+    .is_top_app = 0,
 };
 
 /*
@@ -273,7 +276,9 @@ schedtune_cpu_update(int cpu, u64 now)
             util_min = bg->group[idx].util_min;
         }
 
-        if( bg->group[idx].util_max != 0 && util_max < bg->group[idx].util_max ) {
+        if( bg->group[idx].util_max == 0 ) {
+            util_max = 0;
+        } else if( util_max < bg->group[idx].util_max ) {
             util_max = bg->group[idx].util_max;
         }
 	}
@@ -688,29 +693,49 @@ int schedtune_cpu_util_max(int cpu)
 int schedtune_task_boost(struct task_struct *p)
 {
 	struct schedtune *st;
-	int task_boost;
+	int task_boost, prefer_high_cap;
+    int adj = p->signal->oom_score_adj;
 
 	if (unlikely(!schedtune_initialized))
 		return 0;
 
-
+    if( kernel_profile() == KPROFILE_BATTERY ) return 0;
+    if( p->prio > DEFAULT_PRIO ) return 0;
 
 	/* Get task boost value */
 	rcu_read_lock();
 	st = task_schedtune(p);
 	task_boost = st->boost;
+	prefer_high_cap = st->prefer_high_cap;
+
 	rcu_read_unlock();
 
-    if( task_boost > 0 ) {
-        if( kernel_profile() == KPROFILE_BATTERY ) return 0;
-        if( p->prio > DEFAULT_PRIO ) return 0;
-        if( p->signal->oom_score_adj > 0 ) {
-            if( unlikely(enable_boost_debug) ) pr_info("Boosted background task %d, %d, %d", p->pid, task_boost, p->signal->oom_score_adj);
-            return 0;
-        }
+    if( adj == 0 && task_boost == 0 && prefer_high_cap == 0 ) {
+	    if (st->is_top_app) {
+		    if ((adj == 0) && !(p->flags & PF_KTHREAD)) {
+                if( unlikely(enable_boost_debug) ) pr_info("Boosted background task \'%s\' %d, %d, %d, %d (forced)", p->comm, p->pid, task_boost, p->signal->oom_score_adj, p->prio);
+                return 1;
+	    	}
+    	}
+
     }
 
-	return task_boost;
+    if( task_boost > 0 || prefer_high_cap > 0 ) {
+        if( adj > 0 ) return 0;
+        if( p->flags & PF_KTHREAD ) return 0;
+        /*if( p->prio == DEFAULT_PRIO ) { 
+            p->prio = DEFAULT_PRIO - 10;
+            pr_info("Promote boosted task to DEFAULT_PRIO-10 \'%s\' %d, %d, %d, %d, (def=%d)", p->comm, p->pid, task_boost, p->signal->oom_score_adj, p->prio, DEFAULT_PRIO);
+        }*/
+    }
+
+    if( task_boost == 0 && p->prio == 110 ) {
+        if( p->flags & PF_KTHREAD ) return 0;
+        task_boost = 5;
+    }
+
+    if( unlikely(enable_boost_debug) && task_boost > 0 ) pr_info("Boosted background task \'%s\' %d, %d, %d, %d, (def=%d)", p->comm, p->pid, task_boost, p->signal->oom_score_adj, p->prio, DEFAULT_PRIO);
+	return max_t(int, task_boost, 0);
 }
 
 /*  The same as schedtune_task_boost except assuming the caller has the rcu read
@@ -719,16 +744,43 @@ int schedtune_task_boost(struct task_struct *p)
 int schedtune_task_boost_rcu_locked(struct task_struct *p)
 {
 	struct schedtune *st;
-	int task_boost;
+	int task_boost, prefer_high_cap;
+    int adj = p->signal->oom_score_adj;
 
 	if (unlikely(!schedtune_initialized))
 		return 0;
 
+    if( kernel_profile() == KPROFILE_BATTERY ) return 0;
+    if( p->prio >= DEFAULT_PRIO ) return 0;
+
 	/* Get task boost value */
 	st = task_schedtune(p);
 	task_boost = st->boost;
+	prefer_high_cap = st->prefer_high_cap;
 
-	return task_boost;
+    if( adj == 0 && task_boost == 0  && prefer_high_cap == 0 ) {
+	    if (st->is_top_app) {
+		    if ((adj == 0) && !(p->flags & PF_KTHREAD)) {
+                if( unlikely(enable_boost_debug) ) pr_info("Boosted background task \'%s\' %d, %d, %d, %d (rcu locked) (forced)", p->comm, p->pid, task_boost, p->signal->oom_score_adj, p->prio);
+                return 1;
+	    	}
+    	}
+
+    }
+
+    if( task_boost > 0 || prefer_high_cap > 0 ) {
+        //if( p->prio >= DEFAULT_PRIO ) return 0;
+        if( adj > 0 ) return 0;
+        if( p->flags & PF_KTHREAD ) return 0;
+    }
+
+    if( task_boost == 0 && prefer_high_cap > 0 ) {
+        task_boost = 1;
+    }
+
+    if( unlikely(enable_boost_debug) && task_boost > 0 ) pr_info("Boosted background task \'%s\' %d, %d, %d, %d (rcu locked)", p->comm, p->pid, task_boost, p->signal->oom_score_adj, p->prio);
+
+	return max_t(int, task_boost, 0);
 }
 
 int schedtune_prefer_idle(struct task_struct *p)
@@ -740,8 +792,7 @@ int schedtune_prefer_idle(struct task_struct *p)
 		return 0;
 
     if( kernel_profile() == KPROFILE_BATTERY ) return 0;
-
-    if( p->prio > DEFAULT_PRIO ) return 0;
+    if( p->prio >= DEFAULT_PRIO ) return 0;
 
 	/* Get prefer_idle value */
 	rcu_read_lock();
@@ -750,10 +801,10 @@ int schedtune_prefer_idle(struct task_struct *p)
 	rcu_read_unlock();
 
     if( prefer_idle && (p->signal->oom_score_adj > 0) ) {
-        if( unlikely(enable_boost_debug) ) pr_info("Prefer idle background task %d, %d, %d", p->pid, prefer_idle, p->signal->oom_score_adj);
         return 0;
     }
 
+    if( unlikely(enable_boost_debug) && prefer_idle ) pr_info("Prefer idle background task \'%s\' %d, %d, %d, %d", p->comm, p->pid, prefer_idle, p->signal->oom_score_adj, p->prio);
 	return prefer_idle;
 }
 
@@ -786,7 +837,7 @@ int schedtune_util_min(struct task_struct *p)
 
     if( kernel_profile() == KPROFILE_BATTERY ) return 0;
 
-    if( p->prio > DEFAULT_PRIO ) return 0;
+    if( p->prio >= DEFAULT_PRIO ) return 0;
 
 	/* Get prefer_idle value */
 	rcu_read_lock();
@@ -795,7 +846,7 @@ int schedtune_util_min(struct task_struct *p)
 	rcu_read_unlock();
 
     if( util_min && (p->signal->oom_score_adj > 0) ) {
-        if( unlikely(enable_boost_debug) ) pr_info("Min utilization background task %d, %d, %d", p->pid, util_min, p->signal->oom_score_adj);
+        //if( unlikely(enable_boost_debug) ) pr_info("Min utilization background task %d, %d, %d", p->pid, util_min, p->signal->oom_score_adj);
         return 0;
     }
 
@@ -807,7 +858,9 @@ util_min_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
 	struct schedtune *st = css_st(css);
 
-	return st->util_min;
+    long util_min_s =  DIV_ROUND_CLOSEST_ULL(st->util_min * 100, SCHED_CAPACITY_SCALE);
+
+	return util_min_s;
 }
 
 static int
@@ -819,7 +872,9 @@ util_min_write(struct cgroup_subsys_state *css, struct cftype *cft,
     if (util_min < 0 ) return -EINVAL;
     if (util_min > 100 ) return -EINVAL;
 
-	st->util_min = util_min;
+    long util_min_n = DIV_ROUND_CLOSEST_ULL(SCHED_CAPACITY_SCALE * util_min,100);
+
+	st->util_min = util_min_n;
 
 	schedtune_boostgroup_update_util_min(st->idx, st->util_min);
 
@@ -842,7 +897,7 @@ int schedtune_util_max(struct task_struct *p)
 	rcu_read_unlock();
 
     if( util_max && (p->signal->oom_score_adj > 0) ) {
-        if( unlikely(enable_boost_debug) ) pr_info("Max utilization background task %d, %d, %d", p->pid, util_max, p->signal->oom_score_adj);
+        //if( unlikely(enable_boost_debug) ) pr_info("Max utilization background task %d, %d, %d", p->pid, util_max, p->signal->oom_score_adj);
         return 0;
     }
 
@@ -854,7 +909,9 @@ util_max_read(struct cgroup_subsys_state *css, struct cftype *cft)
 {
 	struct schedtune *st = css_st(css);
 
-	return st->util_max;
+    long util_max_s =  DIV_ROUND_CLOSEST_ULL(st->util_max * 100, SCHED_CAPACITY_SCALE);
+
+	return util_max_s;
 }
 
 static int
@@ -866,7 +923,9 @@ util_max_write(struct cgroup_subsys_state *css, struct cftype *cft,
     if (util_max < 0 ) return -EINVAL;
     if (util_max > 100 ) return -EINVAL;
 
-	st->util_max = util_max;
+    long util_max_n = DIV_ROUND_CLOSEST_ULL(SCHED_CAPACITY_SCALE * util_max,100);
+
+	st->util_max = util_max_n;
 
 	schedtune_boostgroup_update_util_max(st->idx, st->util_max);
 
@@ -934,7 +993,7 @@ int schedtune_prefer_high_cap(struct task_struct *p)
 
     if( kernel_profile() == KPROFILE_BATTERY ) return 0;
 
-    if( p->prio > DEFAULT_PRIO ) return 0;
+    if( p->prio >= DEFAULT_PRIO ) return 0;
 
 	/* Get prefer_high_cap value */
 	rcu_read_lock();
@@ -943,10 +1002,10 @@ int schedtune_prefer_high_cap(struct task_struct *p)
 	rcu_read_unlock();
 
     if( prefer_high_cap && (p->signal->oom_score_adj > 0) ) {
-        if( unlikely(enable_boost_debug) ) pr_info("High cap background task %d, %d, %d", p->pid, prefer_high_cap, p->signal->oom_score_adj);
         return 0;
     }
 
+    if( unlikely(enable_boost_debug) && prefer_high_cap ) pr_info("High cap background task \'%s\' %d, %d, %d, %d", p->comm, p->pid, prefer_high_cap, p->signal->oom_score_adj, p->prio);
 	return prefer_high_cap;
 }
 
@@ -963,6 +1022,23 @@ static int prefer_high_cap_write(struct cgroup_subsys_state *css,
 {
 	struct schedtune *st = css_st(css);
 	st->prefer_high_cap = !!prefer_high_cap;
+
+	return 0;
+}
+
+static u64 is_top_app_read(struct cgroup_subsys_state *css,
+				struct cftype *cft)
+{
+	struct schedtune *st = css_st(css);
+
+	return st->is_top_app;
+}
+
+static int is_top_app_write(struct cgroup_subsys_state *css,
+				 struct cftype *cft, u64 is_top_app)
+{
+	struct schedtune *st = css_st(css);
+	st->is_top_app = !!is_top_app;
 
 	return 0;
 }
@@ -1005,6 +1081,11 @@ static struct cftype files[] = {
 		.read_u64 = util_max_read,
 		.write_u64 = util_max_write,
 	},
+	{
+		.name = "is_top_app",
+		.read_u64 = is_top_app_read,
+		.write_u64 = is_top_app_write,
+	},
 	{} /* terminate */
 };
 
@@ -1033,6 +1114,8 @@ schedtune_css_alloc(struct cgroup_subsys_state *parent_css)
 {
 	struct schedtune *st;
 	int idx;
+	//char name_buf[NAME_MAX + 1];
+
 
 	if (!parent_css)
 		return &root_schedtune.css;
@@ -1062,6 +1145,12 @@ schedtune_css_alloc(struct cgroup_subsys_state *parent_css)
 	init_sched_boost(st);
 	if (schedtune_boostgroup_init(st))
 		goto release;
+
+   	//cgroup_name(st->css.cgroup, name_buf, sizeof(name_buf));
+    //if (!strncmp(name_buf, "top-app", strlen("top-app"))) {
+    //    st->is_top_app = true;
+    //}
+
 
 	return &st->css;
 
