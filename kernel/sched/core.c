@@ -58,9 +58,6 @@
 #endif
 #define MODULE_PARAM_PREFIX "sched."
 
-static bool enable_perf_mask = true;
-module_param(enable_perf_mask, bool, 0664);
-
 
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
@@ -1179,7 +1176,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 		goto out;
 
 	//cpumask_andnot(&allowed_mask, new_mask, cpu_isolated_mask);
-	cpumask_and(&allowed_mask, &allowed_mask, cpu_valid_mask);
+    cpumask_and(&allowed_mask, new_mask, cpu_valid_mask);
 
 	dest_cpu = cpumask_any(&allowed_mask);
 	if (dest_cpu >= nr_cpu_ids) {
