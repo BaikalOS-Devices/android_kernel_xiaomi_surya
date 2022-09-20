@@ -290,7 +290,7 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu,
 
     cur_util = cpu_util_freq(cpu, &loadcpu->walt_load);
 
-	*util = boosted_cpu_util(cpu, &loadcpu->walt_load);
+	*util = boosted_cpu_util(cpu, NULL /*&loadcpu->walt_load*/);
 
 	if (unlikely(use_pelt())) {
 		sched_avg_update(rq);
