@@ -69,7 +69,7 @@ struct lpm_cluster *lpm_root_node;
 #define lpm_prediction_enabled	true
 #define lpm_ipi_prediction_enabled	false
 
-static bool cluster_use_deepest_state;
+static bool cluster_use_deepest_state = true;
 module_param(cluster_use_deepest_state, bool, 0664);
 
 static uint32_t bias_hyst;
@@ -108,7 +108,7 @@ static void cluster_prepare(struct lpm_cluster *cluster,
 		const struct cpumask *cpu, int child_idx, bool from_idle,
 		int64_t time);
 
-static bool print_parsed_dt;
+static bool print_parsed_dt = true;
 module_param_named(print_parsed_dt, print_parsed_dt, bool, 0664);
 
 static bool sleep_disabled;
