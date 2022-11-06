@@ -57,10 +57,7 @@
 };
 
 &pm6150l_wled {
-	/*qcom,fs-current-limit = <25000>;*/
 	qcom,string-cfg=<7>;
-	/*qcom,en-cabc;
-	qcom,cabc-sel = <1>;*/
 	status = "ok";
 };
 
@@ -113,7 +110,7 @@
                 qcom,nq-esepwr = <&tlmm 94 0x00>;
                 */
                 qcom,nq-esepwr = <&tlmm 22 0x00>;
-        interrupt-parent = <&tlmm>;
+		interrupt-parent = <&tlmm>;
 		interrupts = <37 0>;
 		interrupt-names = "nfc_irq";
 		pinctrl-names = "nfc_active", "nfc_suspend";
@@ -405,7 +402,7 @@
 	qcom,hold-soc-while-full;
 	qcom,linearize-soc;
     qcom,cl-disable = <1>;
-	//qcom,cl-feedback-on;
+	qcom,cl-feedback-on;
 	qcom,tcss-enable;
 	qcom,bass-enable;
 	qcom,vbatt-cutoff-mv = <3400>;
@@ -453,17 +450,17 @@
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,usb-icl-ua = <3000000>;
 	qcom,auto-recharge-soc = <99>;
-    qcom,fcc-max-ua = <5000000>;
-	qcom,fcc-max-ua-surya = <5000000>;
+    qcom,fcc-max-ua = <6000000>;
+	qcom,fcc-max-ua-surya = <5200000>;
 	qcom,fcc-max-ua-karna = <6000000>;
-	qcom,fv-max-uv = <4480000>;
+	qcom,fv-max-uv = <4450000>;
 	qcom,chg-term-src = <1>;
 	qcom,chg-term-current-ma = <(-200)>;
 	qcom,sw-jeita-enable;
 	//qcom,fcc-stepping-enable;
 	//qcom,suspend-input-on-debug-batt;
 	qcom,sec-charger-config = <0>;
-	qcom,thermal-mitigation = <6000000 5500000 5000000 5000000 5000000 4400000 4200000
+	qcom,thermal-mitigation = <6000000 5500000 5200000 5200000 5000000 4400000 4200000
 				   3800000 3800000 3600000 3400000 3200000 3000000 2200000
 				   1500000 900000>;
 	dpdm-supply = <&qusb_phy0>;
