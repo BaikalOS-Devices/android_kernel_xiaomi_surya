@@ -349,7 +349,7 @@ static void usbpd_pm_update_cp_status(struct usbpd_pm *pdpm)
 	}
 
 	ret = power_supply_get_property(pdpm->cp_psy,
-			POWER_SUPPLY_PROP_CHARGE_ENABLED, &val);
+			POWER_SUPPLY_PROP_CHARGING_ENABLED, &val);
 	if (!ret)
 		pdpm->cp.charge_enabled = val.intval;
 
@@ -405,7 +405,7 @@ static void usbpd_pm_update_cp_sec_status(struct usbpd_pm *pdpm)
 		pdpm->cp_sec.ibus_curr = val.intval;
 
 	ret = power_supply_get_property(pdpm->cp_sec_psy,
-			POWER_SUPPLY_PROP_CHARGE_ENABLED, &val);
+			POWER_SUPPLY_PROP_CHARGING_ENABLED, &val);
 	if (!ret)
 		pdpm->cp_sec.charge_enabled = val.intval;
 }
@@ -1026,6 +1026,8 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 			usbpd_select_pdo(pdpm->pd, pdpm->apdo_selected_pdo,
 						pdpm->request_voltage * 1000,
 						pdpm->request_current * 1000);
+			pr_info("request_voltage:%d, request_current:%d\n",
+					pdpm->request_voltage, pdpm->request_current);
 		}
 		/*stop second charge pump if either of ibus is lower than 400ma during CV*/
 		if (pm_config.cp_sec_enable && pdpm->cp_sec.charge_enabled

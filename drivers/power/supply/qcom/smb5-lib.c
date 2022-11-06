@@ -8182,6 +8182,7 @@ static void smblib_six_pin_batt_step_chg_work(struct work_struct *work)
 		return;
 
 	if (input_present == INPUT_NOT_PRESENT) {
+    	pr_err("input_present: INPUT_NOT_PRESENT\n");
 		chg->init_start_vbat_checked = false;
 		chg->trigger_taper_count = 0;
 		chg->index_vfloat = 0;

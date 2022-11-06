@@ -1727,11 +1727,13 @@ static int bq2597x_init_device(struct bq2597x *bq)
 
 static int bq2597x_set_present(struct bq2597x *bq, bool present)
 {
-	bq->usb_present = present;
+    if( bq->usb_present != present ) {
+      	bq->usb_present = present;
 
-	if (present)
-		bq2597x_init_device(bq);
-	return 0;
+        if (present)
+    	    bq2597x_init_device(bq);
+	    return 0;
+    }
 }
 
 static ssize_t bq2597x_show_registers(struct device *dev,
@@ -1978,6 +1980,7 @@ static int bq2597x_charger_is_writeable(struct power_supply *psy,
 	int ret;
 
 	switch (prop) {
+    case POWER_SUPPLY_PROP_PRESENT:
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 	case POWER_SUPPLY_PROP_TI_SET_BUS_PROTECTION_FOR_QC3:
 		ret = 1;
@@ -2415,6 +2418,8 @@ static inline bool is_device_suspended(struct bq2597x *bq)
 	return !bq->resume_completed;
 }
 
+extern bool usb_keep_awake_connected;
+
 static int bq2597x_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -2422,7 +2427,7 @@ static int bq2597x_suspend(struct device *dev)
 	int bq_charge_awake = 0;
 	bq_charge_awake = get_charge_awake_state(bq);
 	if(!!bq_charge_awake){
-		return -16;
+        if( usb_keep_awake_connected ) return -16;
 	}
 
 	mutex_lock(&bq->irq_complete);
