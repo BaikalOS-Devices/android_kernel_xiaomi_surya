@@ -91,6 +91,8 @@ show_attr(__attr)			\
 store_attr(__attr, min, max)		\
 static DEVICE_ATTR(__attr, 0664, show_##__attr, store_##__attr)
 
+extern bool enable_cpu_boost;
+
 gov_attr(boost,-100,100);
 gov_attr(load_mul,-100,100);
 gov_attr(load_div,-100,100);
@@ -433,7 +435,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq)
 		scm_data[0] = level;
 		scm_data[1] = priv->bin.total_time;
 
-        if( priv->boost ) {
+        if( enable_cpu_boost && priv->boost ) {
             scm_data[2] = priv->bin.busy_time + (priv->bin.busy_time * priv->boost) / 10;
         } else if( priv->load_mul ) {
     		scm_data[2] = priv->bin.busy_time + (priv->bin.busy_time * priv->load_mul) / 10;

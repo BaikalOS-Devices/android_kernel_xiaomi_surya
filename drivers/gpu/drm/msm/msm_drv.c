@@ -61,6 +61,8 @@
 #define MSM_VERSION_MINOR	2
 #define MSM_VERSION_PATCHLEVEL	0
 
+extern bool enable_render_boost;
+
 static DEFINE_MUTEX(msm_release_lock);
 
 static void msm_fb_output_poll_changed(struct drm_device *dev)
@@ -502,8 +504,8 @@ static void msm_drm_pm_unreq(struct work_struct *work)
 						    typeof(*priv),
 						    pm_unreq_dwork);
 
-	pm_qos_update_request(&priv->pm_irq_req, PM_QOS_DEFAULT_VALUE);
-	atomic_set_release(&priv->pm_req_set, 0);
+	//pm_qos_update_request(&priv->pm_irq_req, PM_QOS_DEFAULT_VALUE);
+	//atomic_set_release(&priv->pm_req_set, 0);
 }
 
 static ssize_t idle_encoder_mask_store(struct device *device,
@@ -791,6 +793,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 	 * other real time and normal priority task
 	 */
 	param.sched_priority = 16;
+
 	for (i = 0; i < priv->num_crtcs; i++) {
 
 		/* initialize display thread */
@@ -798,7 +801,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		kthread_init_worker(&priv->disp_thread[i].worker);
 		priv->disp_thread[i].dev = ddev;
 
-        if( i == 0 ) {
+        if( enable_render_boost ) {
     		priv->disp_thread[i].thread =
 	    		kthread_run_perf_critical(cpu_perf_mask,
 		    		kthread_worker_fn,
@@ -812,7 +815,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
         }
 
 		ret = sched_setscheduler(priv->disp_thread[i].thread,
-							SCHED_RR, &param);
+							SCHED_FIFO, &param);
 		if (ret)
 			pr_warn("display thread priority update failed: %d\n",
 									ret);
@@ -827,7 +830,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		kthread_init_worker(&priv->event_thread[i].worker);
 		priv->event_thread[i].dev = ddev;
 
-        if( i == 0 ) {
+        if( enable_render_boost ) {
 		    priv->event_thread[i].thread =
 			    kthread_run_perf_critical(cpu_perf_mask,
     				kthread_worker_fn,
@@ -884,11 +887,18 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 	 * other important events.
 	 */
 	kthread_init_worker(&priv->pp_event_worker);
-	priv->pp_event_thread = kthread_run_perf_critical(cpu_perf_mask,
-			kthread_worker_fn, &priv->pp_event_worker, "pp_event");
+
+    if( enable_render_boost ) {
+    	priv->pp_event_thread = kthread_run_perf_critical(cpu_perf_mask,
+    			kthread_worker_fn, &priv->pp_event_worker, "pp_event");
+
+    } else {
+    	priv->pp_event_thread = kthread_run(
+    			kthread_worker_fn, &priv->pp_event_worker, "pp_event");
+    }
 
 	ret = sched_setscheduler(priv->pp_event_thread,
-						SCHED_RR, &param);
+						SCHED_FIFO, &param);
 	if (ret)
 		pr_warn("pp_event thread priority update failed: %d\n",
 								ret);
@@ -915,6 +925,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		}
 	}
 
+    dev_info(dev, "msm_irq:%d", platform_get_irq(pdev, 0));
 	irq_set_perf_affinity(platform_get_irq(pdev, 0), IRQF_PERF_AFFINE);
 
 	ret = drm_dev_register(ddev, 0);
@@ -1231,10 +1242,10 @@ static void msm_irq_preinstall(struct drm_device *dev)
 
 	BUG_ON(!kms);
 	kms->funcs->irq_preinstall(kms);
-	priv->pm_irq_req.type = PM_QOS_REQ_AFFINE_IRQ;
+	/*priv->pm_irq_req.type = PM_QOS_REQ_AFFINE_IRQ;
 	priv->pm_irq_req.irq = sde_kms->irq_num;
 	pm_qos_add_request(&priv->pm_irq_req, PM_QOS_CPU_DMA_LATENCY,
-			   PM_QOS_DEFAULT_VALUE);
+			   PM_QOS_DEFAULT_VALUE);*/
 }
 
 static int msm_irq_postinstall(struct drm_device *dev)
@@ -1254,7 +1265,7 @@ static void msm_irq_uninstall(struct drm_device *dev)
 	BUG_ON(!kms);
 	kms->funcs->irq_uninstall(kms);
 	flush_delayed_work(&priv->pm_unreq_dwork);
-	pm_qos_remove_request(&priv->pm_irq_req);
+	//pm_qos_remove_request(&priv->pm_irq_req);
 }
 
 static int msm_enable_vblank(struct drm_device *dev, unsigned int pipe)
