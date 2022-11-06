@@ -36,6 +36,7 @@ LIST_HEAD(cpuidle_detected_devices);
 static int enabled_devices;
 static int off __read_mostly;
 static int initialized __read_mostly;
+static int always_deepest __read_mostly;
 
 #ifdef CONFIG_SMP
 static atomic_t idled = ATOMIC_INIT(0);
@@ -127,6 +128,8 @@ static int find_deepest_state(struct cpuidle_driver *drv,
 void cpuidle_use_deepest_state(bool enable)
 {
 	struct cpuidle_device *dev;
+
+    if( always_deepest ) enable = true;
 
 	preempt_disable();
 	dev = cpuidle_get_device();
@@ -716,4 +719,6 @@ static int __init cpuidle_init(void)
 }
 
 module_param(off, int, 0444);
+module_param(always_deepest, int, 0644);
+
 core_initcall(cpuidle_init);
