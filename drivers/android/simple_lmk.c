@@ -14,6 +14,7 @@
 #include <linux/vmpressure.h>
 #include <uapi/linux/sched/types.h>
 
+
 /* The minimum number of pages to free per reclaim */
 #define MIN_FREE_PAGES (CONFIG_ANDROID_SIMPLE_LMK_MINFREE * SZ_1M / PAGE_SIZE)
 
@@ -22,6 +23,16 @@
 
 /* Timeout in jiffies for each reclaim */
 #define RECLAIM_EXPIRES msecs_to_jiffies(CONFIG_ANDROID_SIMPLE_LMK_TIMEOUT_MSEC)
+
+
+#undef MODULE_PARAM_PREFIX
+#define MODULE_PARAM_PREFIX "lowmemorykiller."
+
+static uint32_t lmk_debug_mask = 1;
+module_param_named(debug_mask, lmk_debug_mask, uint, 0664);
+
+static uint32_t prevent_pinned = 1;
+module_param_named(prevent_pinned, prevent_pinned, uint, 0664);
 
 struct victim_info {
 	struct task_struct *tsk;
@@ -106,9 +117,10 @@ static unsigned long find_victims(int *vindex)
 		sig = tsk->signal;
 		adj = READ_ONCE(sig->oom_score_adj);
 
+	   //if( lmk_debug_mask ) pr_info("Potential victim %s with adj %d with size %lu KiB\n", tsk->comm, adj,
+       //                 			get_total_mm_pages(tsk->mm) << (PAGE_SHIFT - 10));
 
-        if( adj == 0 ) adj = 1;
-        else if ( adj == -100 ) adj = -1;
+       if ( adj == -100 && !prevent_pinned ) adj = 2;
         //else if ( adj < 700 ) adj = -1;
 
 		if ( adj < 0 ||
@@ -254,8 +266,11 @@ static void scan_and_kill(void)
 
 	/* Kill the victims */
 	for (i = 0; i < nr_to_kill; i++) {
-		static const struct sched_param sched_zero_prio;
-		struct victim_info *victim = &victims[i];
+        static const struct sched_param sched_max_prio = {
+			.sched_priority = MAX_RT_PRIO - 1
+		};		
+        static const struct sched_param sched_zero_prio;
+        struct victim_info *victim = &victims[i];
 		struct task_struct *t, *vtsk = victim->tsk;
 
 		pr_info("Killing %s with adj %d to free %lu KiB\n", vtsk->comm,
@@ -272,7 +287,8 @@ static void scan_and_kill(void)
 		rcu_read_unlock();
 
 		/* Elevate the victim to SCHED_RR with zero RT priority */
-		sched_setscheduler_nocheck(vtsk, SCHED_RR, &sched_zero_prio);
+		//sched_setscheduler_nocheck(vtsk, SCHED_RR, &sched_max_prio);
+        sched_setscheduler_nocheck(vtsk, SCHED_RR, &sched_zero_prio);
 
 		/* Allow the victim to run on any CPU. This won't schedule. */
 		set_cpus_allowed_ptr(vtsk, cpu_all_mask);
@@ -360,9 +376,7 @@ static int simple_lmk_init_set(const char *val, const struct kernel_param *kp)
 	struct task_struct *thread;
 
 	if (!atomic_cmpxchg(&init_done, 0, 1)) {
-		thread = kthread_run_perf_critical(cpu_perf_mask,
-                     simple_lmk_reclaim_thread, NULL,
-				     "simple_lmkd");
+		thread = kthread_run_perf_critical(cpu_perf_mask, simple_lmk_reclaim_thread, NULL, "simple_lmkd");
 		BUG_ON(IS_ERR(thread));
 		BUG_ON(vmpressure_notifier_register(&vmpressure_notif));
 	}
@@ -375,6 +389,4 @@ static const struct kernel_param_ops simple_lmk_init_ops = {
 };
 
 /* Needed to prevent Android from thinking there's no LMK and thus rebooting */
-#undef MODULE_PARAM_PREFIX
-#define MODULE_PARAM_PREFIX "lowmemorykiller."
 module_param_cb(minfree, &simple_lmk_init_ops, NULL, 0200);
